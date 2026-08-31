@@ -6,6 +6,12 @@ export interface Client {
   city: string;
   street: string;
   zip: string;
+  // Infos commerciales (fiche détaillée uniquement)
+  credit?: number | null;
+  creditLimit?: number | null;
+  paymentTerm?: string;
+  totalInvoiced?: number | null;
+  saleOrderCount?: number | null;
 }
 
 export interface Product {

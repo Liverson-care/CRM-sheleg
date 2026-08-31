@@ -13,6 +13,10 @@ export const demoClients = [
     city: 'Paris',
     street: '12 rue des Halles',
     zip: '75001',
+    credit: 320.5,
+    creditLimit: 2000,
+    paymentTerm: '30 jours net',
+    totalInvoiced: 12450,
   },
   {
     id: 102,
@@ -22,6 +26,10 @@ export const demoClients = [
     city: 'Sarcelles',
     street: '8 avenue Paul Valéry',
     zip: '95200',
+    credit: 0,
+    creditLimit: 1500,
+    paymentTerm: 'Paiement immédiat',
+    totalInvoiced: 8300,
   },
   {
     id: 103,
@@ -31,6 +39,10 @@ export const demoClients = [
     city: 'Créteil',
     street: '45 boulevard Kennedy',
     zip: '94000',
+    credit: 145.9,
+    creditLimit: 1000,
+    paymentTerm: '30 jours net',
+    totalInvoiced: 5600,
   },
   {
     id: 104,
@@ -40,6 +52,10 @@ export const demoClients = [
     city: 'Marseille',
     street: '3 rue de la République',
     zip: '13001',
+    credit: 890,
+    creditLimit: 3000,
+    paymentTerm: '45 jours fin de mois',
+    totalInvoiced: 21000,
   },
   {
     id: 105,
@@ -49,6 +65,10 @@ export const demoClients = [
     city: 'Saint-Ouen',
     street: '22 rue du Docteur Bauer',
     zip: '93400',
+    credit: 60,
+    creditLimit: 800,
+    paymentTerm: '15 jours',
+    totalInvoiced: 3400,
   },
 ];
 

@@ -454,6 +454,16 @@ button.list-row:active {
   flex: 1;
 }
 
+.value-warn {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.value-ok {
+  color: var(--success);
+  font-weight: 700;
+}
+
 .detail-cta {
   margin-top: 4px;
 }

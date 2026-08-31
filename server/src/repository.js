@@ -19,6 +19,14 @@ function normalizeClient(partner) {
     city: partner.city || '',
     street: partner.street || '',
     zip: partner.zip || '',
+    // Infos commerciales (présentes seulement sur la fiche détaillée)
+    credit: partner.credit ?? null,
+    creditLimit: partner.credit_limit ?? partner.creditLimit ?? null,
+    paymentTerm: Array.isArray(partner.property_payment_term_id)
+      ? partner.property_payment_term_id[1]
+      : partner.paymentTerm || '',
+    totalInvoiced: partner.total_invoiced ?? partner.totalInvoiced ?? null,
+    saleOrderCount: partner.sale_order_count ?? null,
   };
 }
 
@@ -70,16 +78,35 @@ const PARTNER_FIELDS = [
   'zip',
 ];
 
-/** Récupère un client par son identifiant. */
+// Champs commerciaux fournis par les modules Sale / Invoicing.
+// Lus « au mieux » : si un module n'est pas installé, on retombe sur la base.
+const PARTNER_EXTRA_FIELDS = [
+  'credit',
+  'credit_limit',
+  'property_payment_term_id',
+  'total_invoiced',
+  'sale_order_count',
+];
+
+/** Récupère un client par son identifiant, avec ses infos commerciales. */
 export async function getClientById(id) {
   const clientId = Number(id);
   if (!config.odooEnabled) {
     const found = demoClients.find((c) => c.id === clientId);
     return found ? normalizeClient(found) : null;
   }
-  const partners = await odoo.executeKw('res.partner', 'read', [[clientId]], {
-    fields: PARTNER_FIELDS,
-  });
+
+  let partners;
+  try {
+    partners = await odoo.executeKw('res.partner', 'read', [[clientId]], {
+      fields: [...PARTNER_FIELDS, ...PARTNER_EXTRA_FIELDS],
+    });
+  } catch {
+    // Un champ étendu peut être absent selon les modules installés : repli.
+    partners = await odoo.executeKw('res.partner', 'read', [[clientId]], {
+      fields: PARTNER_FIELDS,
+    });
+  }
   return partners.length ? normalizeClient(partners[0]) : null;
 }
 

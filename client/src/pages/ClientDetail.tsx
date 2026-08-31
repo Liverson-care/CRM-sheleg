@@ -113,6 +113,32 @@ export default function ClientDetail() {
         <InfoRow label="Réf. Odoo" value={`#${client.id}`} />
       </div>
 
+      {/* Activité commerciale */}
+      <div className="detail-card">
+        <h3 className="detail-card-title">Activité commerciale</h3>
+        {typeof client.credit === 'number' && (
+          <InfoRow
+            label="Encours client"
+            value={
+              <span className={client.credit > 0 ? 'value-warn' : 'value-ok'}>
+                {formatEuro(client.credit)}
+                {typeof client.creditLimit === 'number' && client.creditLimit > 0
+                  ? ` / ${formatEuro(client.creditLimit)}`
+                  : ''}
+              </span>
+            }
+          />
+        )}
+        <InfoRow label="Conditions de paiement" value={client.paymentTerm || '—'} />
+        {typeof client.totalInvoiced === 'number' && (
+          <InfoRow label="Total facturé" value={formatEuro(client.totalInvoiced)} />
+        )}
+        <InfoRow
+          label="Dernière commande"
+          value={orders.length ? formatDate(orders[0].date) : 'Aucune'}
+        />
+      </div>
+
       {/* Historique de ses commandes */}
       <div className="detail-card" id="historique">
         <h3 className="detail-card-title">

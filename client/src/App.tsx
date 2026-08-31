@@ -3,6 +3,7 @@ import { useAuth } from './auth';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Clients from './pages/Clients';
+import ClientDetail from './pages/ClientDetail';
 import Catalog from './pages/Catalog';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders';
@@ -24,6 +25,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Navigate to="/catalogue" replace />} />
         <Route path="/clients" element={<Clients />} />
+        <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/catalogue" element={<Catalog />} />
         <Route path="/panier" element={<Cart />} />
         <Route path="/commandes" element={<Orders />} />

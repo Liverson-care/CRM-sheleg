@@ -326,6 +326,138 @@ button.list-row:active {
   border-radius: 20px;
 }
 
+/* ---------------- Fiche client ---------------- */
+
+.detail-back {
+  margin-bottom: 10px;
+}
+
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.detail-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.avatar-lg {
+  width: 58px;
+  height: 58px;
+  font-size: 24px;
+}
+
+.detail-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--sheleg-700);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s, transform 0.05s;
+}
+
+.action:hover {
+  border-color: var(--sheleg-300);
+}
+
+.action:active {
+  transform: scale(0.98);
+}
+
+.action-primary {
+  background: var(--sheleg-700);
+  border-color: var(--sheleg-700);
+  color: #fff;
+}
+
+.action-primary:hover {
+  border-color: var(--sheleg-900);
+  background: var(--sheleg-900);
+}
+
+.action-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.detail-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+}
+
+.detail-card-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: var(--sheleg-900);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.count-badge {
+  background: var(--sheleg-100);
+  color: var(--sheleg-700);
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-row {
+  display: flex;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.info-row:first-of-type {
+  border-top: none;
+}
+
+.info-label {
+  color: var(--ink-soft);
+  font-weight: 600;
+  min-width: 110px;
+}
+
+.info-value {
+  flex: 1;
+}
+
+.detail-cta {
+  margin-top: 4px;
+}
+
 /* ---------------- Client banner ---------------- */
 
 .client-banner {

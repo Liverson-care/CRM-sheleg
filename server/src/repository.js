@@ -52,11 +52,35 @@ export async function getClients({ search = '' } = {}) {
     domain.push('|', ['name', 'ilike', search], ['email', 'ilike', search]);
   }
   const partners = await odoo.executeKw('res.partner', 'search_read', [domain], {
-    fields: ['id', 'name', 'email', 'phone', 'mobile', 'city', 'street', 'zip'],
+    fields: PARTNER_FIELDS,
     limit: 500,
     order: 'name asc',
   });
   return partners.map(normalizeClient);
+}
+
+const PARTNER_FIELDS = [
+  'id',
+  'name',
+  'email',
+  'phone',
+  'mobile',
+  'city',
+  'street',
+  'zip',
+];
+
+/** Récupère un client par son identifiant. */
+export async function getClientById(id) {
+  const clientId = Number(id);
+  if (!config.odooEnabled) {
+    const found = demoClients.find((c) => c.id === clientId);
+    return found ? normalizeClient(found) : null;
+  }
+  const partners = await odoo.executeKw('res.partner', 'read', [[clientId]], {
+    fields: PARTNER_FIELDS,
+  });
+  return partners.length ? normalizeClient(partners[0]) : null;
 }
 
 // ---------- Produits ----------
@@ -162,11 +186,15 @@ export async function createOrder(order) {
   return { id: orderId, reference: created?.name || String(orderId) };
 }
 
-export async function getOrders() {
+export async function getOrders({ clientId } = {}) {
+  const filterId = clientId ? Number(clientId) : null;
+
   if (!config.odooEnabled) {
-    return demoOrders;
+    return filterId ? demoOrders.filter((o) => o.clientId === filterId) : demoOrders;
   }
-  const orders = await odoo.executeKw('sale.order', 'search_read', [[]], {
+
+  const domain = filterId ? [['partner_id', '=', filterId]] : [];
+  const orders = await odoo.executeKw('sale.order', 'search_read', [domain], {
     fields: ['id', 'name', 'partner_id', 'amount_total', 'state', 'date_order'],
     limit: 100,
     order: 'date_order desc',

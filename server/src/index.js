@@ -10,6 +10,7 @@ import odoo from './odoo.js';
 import { requireAuth } from './middleware/auth.js';
 import {
   getClients,
+  getClientById,
   getProducts,
   createOrder,
   getOrders,
@@ -69,6 +70,16 @@ app.get('/api/clients', requireAuth, async (req, res) => {
   }
 });
 
+app.get('/api/clients/:id', requireAuth, async (req, res) => {
+  try {
+    const client = await getClientById(req.params.id);
+    if (!client) return res.status(404).json({ error: 'Client introuvable' });
+    res.json(client);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 app.get('/api/products', requireAuth, async (req, res) => {
   try {
     const products = await getProducts({ search: req.query.search || '' });
@@ -80,7 +91,7 @@ app.get('/api/products', requireAuth, async (req, res) => {
 
 app.get('/api/orders', requireAuth, async (req, res) => {
   try {
-    const orders = await getOrders();
+    const orders = await getOrders({ clientId: req.query.clientId });
     res.json(orders);
   } catch (err) {
     res.status(502).json({ error: err.message });

@@ -55,13 +55,18 @@ export const api = {
     return request<Client[]>(`/api/clients${q}`);
   },
 
+  getClient(id: number) {
+    return request<Client>(`/api/clients/${id}`);
+  },
+
   getProducts(search = '') {
     const q = search ? `?search=${encodeURIComponent(search)}` : '';
     return request<Product[]>(`/api/products${q}`);
   },
 
-  getOrders() {
-    return request<OrderSummary[]>('/api/orders');
+  getOrders(clientId?: number) {
+    const q = clientId ? `?clientId=${clientId}` : '';
+    return request<OrderSummary[]>(`/api/orders${q}`);
   },
 
   createOrder(payload: {

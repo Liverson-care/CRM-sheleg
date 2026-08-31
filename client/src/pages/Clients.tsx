@@ -5,7 +5,7 @@ import { useCart } from '../cart';
 import type { Client } from '../types';
 
 export default function Clients() {
-  const { client, setClient } = useCart();
+  const { client } = useCart();
   const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
@@ -26,8 +26,7 @@ export default function Clients() {
   }, [search]);
 
   function choose(c: Client) {
-    setClient(c);
-    navigate('/catalogue');
+    navigate(`/clients/${c.id}`);
   }
 
   return (

@@ -8,7 +8,14 @@ import {
   type ReactNode,
 } from 'react';
 import { api } from './api';
-import type { Client, Product, Draft, DraftLine, CreatedOrder } from './types';
+import type {
+  Client,
+  Product,
+  Draft,
+  DraftLine,
+  CreatedOrder,
+  OrderDetail,
+} from './types';
 
 const STORAGE_KEY = 'sheleg.devis';
 
@@ -91,6 +98,7 @@ interface OrderState {
   deleteCurrent: () => void;
   openDevis: (id: string) => void;
   removeDevis: (id: string) => void;
+  duplicateToDraft: (order: OrderDetail, client: Client) => void;
   send: () => Promise<CreatedOrder>;
 }
 
@@ -227,6 +235,34 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     if (found) setDraft(found);
   }
 
+  /** Duplique une commande existante vers un nouveau devis pour un autre client. */
+  function duplicateToDraft(order: OrderDetail, client: Client) {
+    const lines: DraftLine[] = order.lines.map((l) => ({
+      product: {
+        id: l.productId ?? Math.floor(Math.random() * -1000000),
+        name: l.name,
+        default_code: '',
+        barcode: '',
+        list_price: l.price,
+        category: '',
+        uom: '',
+        qty_available: 0,
+        vat: l.vat ?? 20,
+      },
+      qty: l.qty,
+      discount: l.discount,
+    }));
+    setDraft({
+      id: newId(),
+      client,
+      lines,
+      globalDiscount: 0,
+      deliveryDate: '',
+      comment: '',
+      updatedAt: Date.now(),
+    });
+  }
+
   function removeDevis(id: string) {
     setDevisList((list) => list.filter((d) => d.id !== id));
     if (draft?.id === id) clearCurrent();
@@ -278,6 +314,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         deleteCurrent,
         openDevis,
         removeDevis,
+        duplicateToDraft,
         send,
       }}
     >

@@ -14,7 +14,7 @@ export default function ProductImage({
   size = 'card',
 }: {
   product: Product;
-  size?: 'card' | 'detail';
+  size?: 'card' | 'detail' | 'thumb';
 }) {
   const className = `product-img product-img-${size}`;
 

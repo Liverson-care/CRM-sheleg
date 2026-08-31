@@ -922,6 +922,201 @@ a.btn-disabled {
   margin-top: 2px;
 }
 
+.product-foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+/* ---------------- Pastilles de stock ---------------- */
+
+.stock-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stock-pill {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 12px;
+}
+
+.stock-ok {
+  background: #dff5ea;
+}
+.stock-dot.stock-ok {
+  background: var(--success);
+}
+.stock-pill.stock-ok {
+  color: var(--success);
+}
+
+.stock-faible {
+  background: #fff3dc;
+}
+.stock-dot.stock-faible {
+  background: #e08a1e;
+}
+.stock-pill.stock-faible {
+  color: #b8791b;
+}
+
+.stock-rupture {
+  background: #fbe4e1;
+}
+.stock-dot.stock-rupture {
+  background: var(--danger);
+}
+.stock-pill.stock-rupture {
+  color: var(--danger);
+}
+
+/* ---------------- Bascule vue grille / liste ---------------- */
+
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.view-toggle button {
+  border: none;
+  background: transparent;
+  padding: 9px 11px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.view-toggle button.on {
+  background: var(--sheleg-700);
+  color: #fff;
+}
+
+/* ---------------- Vue liste produits ---------------- */
+
+.product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.product-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  box-shadow: var(--shadow);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.product-row:hover {
+  border-color: var(--sheleg-300);
+}
+
+.product-row.in-cart {
+  border-color: var(--sheleg-500);
+}
+
+.product-img-thumb {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.product-img-thumb.product-img-placeholder {
+  font-size: 26px;
+}
+
+.product-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-row-right {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.cart-flag-inline {
+  background: var(--sheleg-700);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* ---------------- Actions détail commande ---------------- */
+
+.order-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.list-open-row {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.list-open-row:hover {
+  border-color: var(--sheleg-300);
+}
+
+/* ---------------- Sélecteur de client (duplication) ---------------- */
+
+.modal-tall {
+  max-width: 420px;
+}
+
+.pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+}
+
+.pick-row:hover {
+  border-color: var(--sheleg-300);
+  background: var(--sheleg-50);
+}
+
 /* ---------------- Barre d'outils / export ---------------- */
 
 .head-tools {

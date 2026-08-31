@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useOrder } from '../order';
-import { formatEuro } from '../util';
+import { formatEuro, stockLevel } from '../util';
 import ProductImage from '../components/ProductImage';
 import type { Product } from '../types';
 
@@ -55,10 +55,14 @@ export default function ProductDetail() {
             <InfoRow label="Référence" value={product.default_code || '—'} />
             <InfoRow label="Code-barres" value={product.barcode || '—'} />
             <InfoRow label="Unité de vente" value={product.uom || '—'} />
-            <InfoRow
-              label="Stock disponible"
-              value={`${product.qty_available} ${product.uom || ''}`.trim()}
-            />
+            <div className="info-row">
+              <span className="info-label">Stock disponible</span>
+              <span className="info-value">
+                <span className={`stock-pill stock-${stockLevel(product.qty_available).cls}`}>
+                  {stockLevel(product.qty_available).label}
+                </span>
+              </span>
+            </div>
           </div>
 
           {qty === 0 ? (

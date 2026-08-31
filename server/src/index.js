@@ -15,6 +15,7 @@ import {
   getProductById,
   createOrder,
   getOrders,
+  getOrderById,
 } from './repository.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -104,6 +105,16 @@ app.get('/api/orders', requireAuth, async (req, res) => {
   try {
     const orders = await getOrders({ clientId: req.query.clientId });
     res.json(orders);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+app.get('/api/orders/:id', requireAuth, async (req, res) => {
+  try {
+    const order = await getOrderById(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Commande introuvable' });
+    res.json(order);
   } catch (err) {
     res.status(502).json({ error: err.message });
   }

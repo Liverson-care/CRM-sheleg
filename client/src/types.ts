@@ -46,16 +46,42 @@ export interface Draft {
   updatedAt: number;
 }
 
-export type OrderStatus = 'devis' | 'envoyee' | 'confirmee' | 'annulee';
+export type OrderStatus = 'devis' | 'envoyee' | 'confirmee' | 'livree' | 'annulee';
 
 export interface OrderSummary {
   id: number | string;
   reference: string;
   client: string;
+  clientId?: number;
   total: number;
   state?: string;
   status: OrderStatus;
   date: string;
+}
+
+export interface OrderDetailLine {
+  name: string;
+  productId?: number;
+  qty: number;
+  price: number;
+  discount: number;
+  vat?: number;
+  totalHT: number;
+}
+
+export interface OrderDetail {
+  id: number | string;
+  reference: string;
+  client: string;
+  clientId: number | null;
+  status: OrderStatus;
+  deliveryDate: string;
+  comment: string;
+  date: string;
+  lines: OrderDetailLine[];
+  totalHT: number;
+  totalTVA: number;
+  totalTTC: number;
 }
 
 export interface CreatedOrder {

@@ -18,11 +18,21 @@ export function formatDate(iso: string): string {
   }).format(d);
 }
 
+/**
+ * Niveau de stock pour la pastille : vert (≥100), orange (<100), rouge (0).
+ */
+export function stockLevel(qty: number): { cls: string; label: string } {
+  if (qty <= 0) return { cls: 'rupture', label: 'Rupture' };
+  if (qty < 100) return { cls: 'faible', label: `Stock faible · ${qty}` };
+  return { cls: 'ok', label: `En stock · ${qty}` };
+}
+
 export function orderStatusLabel(status: string): string {
   const map: Record<string, string> = {
     devis: 'Devis',
     envoyee: 'Envoyée',
     confirmee: 'Confirmée',
+    livree: 'Livrée',
     annulee: 'Annulée',
   };
   return map[status] || status;

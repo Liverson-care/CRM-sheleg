@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useOrder } from '../order';
-import { formatEuro } from '../util';
+import { formatEuro, stockLevel } from '../util';
 import ProductImage from '../components/ProductImage';
 import type { Product } from '../types';
 
+const VIEW_KEY = 'sheleg.catalogView';
+
 export default function Catalog() {
   const { draft, totals } = useOrder();
-  const client = draft?.client ?? null;
   const lines = draft?.lines ?? [];
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
@@ -17,6 +18,13 @@ export default function Catalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [view, setView] = useState<'grid' | 'list'>(() => {
+    try {
+      return (localStorage.getItem(VIEW_KEY) as 'grid' | 'list') || 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,6 +49,15 @@ export default function Catalog() {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
+
+  function chooseView(v: 'grid' | 'list') {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  }
 
   const categories = useMemo(() => {
     const set = new Set(products.map((p) => p.category).filter(Boolean));
@@ -74,6 +91,24 @@ export default function Catalog() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <div className="view-toggle" role="group" aria-label="Affichage">
+            <button
+              className={view === 'grid' ? 'on' : ''}
+              onClick={() => chooseView('grid')}
+              aria-label="Grille"
+              title="Grille"
+            >
+              <GridIcon />
+            </button>
+            <button
+              className={view === 'list' ? 'on' : ''}
+              onClick={() => chooseView('list')}
+              aria-label="Liste"
+              title="Liste"
+            >
+              <ListIcon />
+            </button>
+          </div>
           <div className="export-wrap" ref={menuRef}>
             <button className="btn-ghost btn-export" onClick={() => setMenuOpen((o) => !o)}>
               <ExportIcon /> Exporter
@@ -92,25 +127,6 @@ export default function Catalog() {
         </div>
       </div>
 
-      <div className="client-banner">
-        {client ? (
-          <>
-            <span className="muted">Commande pour</span>
-            <strong>{client.name}</strong>
-            <Link to="/clients" className="link">
-              Changer
-            </Link>
-          </>
-        ) : (
-          <>
-            <span className="muted">Aucun client sélectionné.</span>
-            <Link to="/clients" className="link">
-              Choisir un client
-            </Link>
-          </>
-        )}
-      </div>
-
       <div className="chips">
         {categories.map((c) => (
           <button
@@ -126,28 +142,65 @@ export default function Catalog() {
       {error && <div className="form-error">{error}</div>}
       {loading && <div className="muted">Chargement…</div>}
 
-      <div className="product-grid">
-        {filtered.map((p) => {
-          const q = qtyInCart(p.id);
-          return (
-            <button
-              key={p.id}
-              className={`product-card ${q > 0 ? 'in-cart' : ''}`}
-              onClick={() => navigate(`/produit/${p.id}`)}
-            >
-              {q > 0 && <span className="cart-flag">×{q}</span>}
-              <ProductImage product={p} size="card" />
-              <div className="product-cat">{p.category}</div>
-              <div className="product-name">{p.name}</div>
-              {p.default_code && <span className="code">{p.default_code}</span>}
-              <div className="price">{formatEuro(p.list_price)}</div>
-            </button>
-          );
-        })}
-        {!loading && filtered.length === 0 && (
-          <div className="empty">Aucun produit trouvé.</div>
-        )}
-      </div>
+      {view === 'grid' ? (
+        <div className="product-grid">
+          {filtered.map((p) => {
+            const q = qtyInCart(p.id);
+            const st = stockLevel(p.qty_available);
+            return (
+              <button
+                key={p.id}
+                className={`product-card ${q > 0 ? 'in-cart' : ''}`}
+                onClick={() => navigate(`/produit/${p.id}`)}
+              >
+                {q > 0 && <span className="cart-flag">×{q}</span>}
+                <ProductImage product={p} size="card" />
+                <div className="product-cat">{p.category}</div>
+                <div className="product-name">{p.name}</div>
+                {p.default_code && <span className="code">{p.default_code}</span>}
+                <div className="product-foot-row">
+                  <div className="price">{formatEuro(p.list_price)}</div>
+                  <span className={`stock-dot stock-${st.cls}`} title={st.label} />
+                </div>
+              </button>
+            );
+          })}
+          {!loading && filtered.length === 0 && (
+            <div className="empty">Aucun produit trouvé.</div>
+          )}
+        </div>
+      ) : (
+        <div className="product-list">
+          {filtered.map((p) => {
+            const q = qtyInCart(p.id);
+            const st = stockLevel(p.qty_available);
+            return (
+              <button
+                key={p.id}
+                className={`product-row ${q > 0 ? 'in-cart' : ''}`}
+                onClick={() => navigate(`/produit/${p.id}`)}
+              >
+                <ProductImage product={p} size="thumb" />
+                <div className="product-row-main">
+                  <div className="product-name">{p.name}</div>
+                  <div className="list-sub">
+                    {p.category}
+                    {p.default_code ? ` · ${p.default_code}` : ''}
+                  </div>
+                  <span className={`stock-pill stock-${st.cls}`}>{st.label}</span>
+                </div>
+                <div className="product-row-right">
+                  <div className="price">{formatEuro(p.list_price)}</div>
+                  {q > 0 && <span className="cart-flag-inline">×{q}</span>}
+                </div>
+              </button>
+            );
+          })}
+          {!loading && filtered.length === 0 && (
+            <div className="empty">Aucun produit trouvé.</div>
+          )}
+        </div>
+      )}
 
       {totals.count > 0 && (
         <button className="draft-bar" onClick={() => navigate('/devis')}>
@@ -163,18 +216,28 @@ export default function Catalog() {
 
 function ExportIcon() {
   return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3v12M8 11l4 4 4-4" />
       <path d="M5 21h14" />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
     </svg>
   );
 }

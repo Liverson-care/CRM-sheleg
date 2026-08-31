@@ -1,4 +1,4 @@
-import type { Client, Product, OrderSummary, CreatedOrder } from './types';
+import type { Client, Product, OrderSummary, OrderDetail, CreatedOrder } from './types';
 
 const TOKEN_KEY = 'sheleg.token';
 
@@ -71,6 +71,10 @@ export const api = {
   getOrders(clientId?: number) {
     const q = clientId ? `?clientId=${clientId}` : '';
     return request<OrderSummary[]>(`/api/orders${q}`);
+  },
+
+  getOrder(id: number | string) {
+    return request<OrderDetail>(`/api/orders/${id}`);
   },
 
   createOrder(payload: {

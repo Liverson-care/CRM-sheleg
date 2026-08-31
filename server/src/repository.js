@@ -56,11 +56,29 @@ function normalizeProduct(product) {
   };
 }
 
-// Mappe l'état Odoo d'une commande vers un statut applicatif.
-function orderStatus(state) {
-  if (state === 'sale' || state === 'done') return 'confirmee';
+// Mappe l'état Odoo (+ statut de livraison) vers un statut applicatif.
+function orderStatus(state, deliveryStatus) {
   if (state === 'cancel') return 'annulee';
+  if ((state === 'sale' || state === 'done') && deliveryStatus === 'full') return 'livree';
+  if (state === 'sale' || state === 'done') return 'confirmee';
   return 'envoyee'; // draft / sent = envoyée à Odoo, en attente de confirmation
+}
+
+/** Combine remise ligne + globale (fraction 0..1). */
+function combinedFrac(lineDiscount = 0, globalDiscount = 0) {
+  return 1 - (1 - lineDiscount / 100) * (1 - globalDiscount / 100);
+}
+
+/** Totaux HT / TVA / TTC à partir de lignes { qty, price, discount, vat }. */
+function orderTotals(lines = [], globalDiscount = 0) {
+  let ht = 0;
+  let tva = 0;
+  for (const l of lines) {
+    const net = l.qty * l.price * (1 - combinedFrac(l.discount, globalDiscount));
+    ht += net;
+    tva += net * ((l.vat ?? config.defaultVat) / 100);
+  }
+  return { ht, tva, ttc: ht + tva };
 }
 
 // ---------- Clients ----------
@@ -70,7 +88,8 @@ export async function getClients({ search = '' } = {}) {
     const s = search.trim().toLowerCase();
     return demoClients
       .filter((c) => !s || c.name.toLowerCase().includes(s) || c.city.toLowerCase().includes(s))
-      .map(normalizeClient);
+      .map(normalizeClient)
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   }
 
   const domain = [['customer_rank', '>', 0]];
@@ -303,12 +322,23 @@ export async function getOrders({ clientId } = {}) {
     const list = filterId
       ? demoOrders.filter((o) => o.clientId === filterId)
       : demoOrders;
-    return list.map((o) => ({ ...o, status: orderStatus(o.state) }));
+    return list.map((o) => {
+      const t = orderTotals(o.lines, o.globalDiscount || 0);
+      return {
+        id: o.id,
+        reference: o.reference,
+        client: o.client,
+        clientId: o.clientId,
+        total: t.ttc,
+        status: orderStatus(o.state, o.deliveryStatus),
+        date: o.date,
+      };
+    });
   }
 
   const domain = filterId ? [['partner_id', '=', filterId]] : [];
   const orders = await odoo.executeKw('sale.order', 'search_read', [domain], {
-    fields: ['id', 'name', 'partner_id', 'amount_total', 'state', 'date_order'],
+    fields: ['id', 'name', 'partner_id', 'amount_total', 'state', 'date_order', ...DELIVERY_FIELD],
     limit: 100,
     order: 'date_order desc',
   });
@@ -317,8 +347,90 @@ export async function getOrders({ clientId } = {}) {
     reference: o.name,
     client: Array.isArray(o.partner_id) ? o.partner_id[1] : '',
     total: o.amount_total ?? 0,
-    state: o.state,
-    status: orderStatus(o.state),
+    status: orderStatus(o.state, o.delivery_status),
     date: o.date_order,
   }));
+}
+
+// delivery_status existe sur sale.order (Odoo 16+ avec le module Stock).
+const DELIVERY_FIELD = ['delivery_status'];
+
+/** Détail complet d'une commande (lignes + totaux) pour la revue et le PDF. */
+export async function getOrderById(id) {
+  if (!config.odooEnabled) {
+    const o = demoOrders.find((x) => String(x.id) === String(id));
+    if (!o) return null;
+    const t = orderTotals(o.lines, o.globalDiscount || 0);
+    return {
+      id: o.id,
+      reference: o.reference,
+      client: o.client,
+      clientId: o.clientId,
+      status: orderStatus(o.state, o.deliveryStatus),
+      deliveryDate: o.deliveryDate || '',
+      comment: o.comment || '',
+      globalDiscount: o.globalDiscount || 0,
+      date: o.date,
+      lines: o.lines.map((l) => ({
+        name: l.name,
+        productId: l.productId,
+        qty: l.qty,
+        price: l.price,
+        discount: l.discount || 0,
+        vat: l.vat ?? config.defaultVat,
+        totalHT: l.qty * l.price * (1 - combinedFrac(l.discount, o.globalDiscount || 0)),
+      })),
+      totalHT: t.ht,
+      totalTVA: t.tva,
+      totalTTC: t.ttc,
+    };
+  }
+
+  // Odoo : lecture de la commande puis de ses lignes.
+  let head;
+  try {
+    [head] = await odoo.executeKw('sale.order', 'read', [[Number(id)]], {
+      fields: [
+        'name', 'partner_id', 'commitment_date', 'note', 'state',
+        'amount_untaxed', 'amount_tax', 'amount_total', 'order_line', 'date_order',
+        ...DELIVERY_FIELD,
+      ],
+    });
+  } catch {
+    [head] = await odoo.executeKw('sale.order', 'read', [[Number(id)]], {
+      fields: [
+        'name', 'partner_id', 'commitment_date', 'note', 'state',
+        'amount_untaxed', 'amount_tax', 'amount_total', 'order_line', 'date_order',
+      ],
+    });
+  }
+  if (!head) return null;
+
+  const lineRows = head.order_line?.length
+    ? await odoo.executeKw('sale.order.line', 'read', [head.order_line], {
+        fields: ['name', 'product_id', 'product_uom_qty', 'price_unit', 'discount', 'price_subtotal'],
+      })
+    : [];
+
+  return {
+    id: Number(id),
+    reference: head.name,
+    client: Array.isArray(head.partner_id) ? head.partner_id[1] : '',
+    clientId: Array.isArray(head.partner_id) ? head.partner_id[0] : null,
+    status: orderStatus(head.state, head.delivery_status),
+    deliveryDate: head.commitment_date || '',
+    comment: head.note || '',
+    date: head.date_order,
+    lines: lineRows.map((l) => ({
+      name: l.name,
+      productId: Array.isArray(l.product_id) ? l.product_id[0] : undefined,
+      qty: l.product_uom_qty,
+      price: l.price_unit,
+      discount: l.discount || 0,
+      totalHT: l.price_subtotal ?? 0,
+    })),
+    totalHT: head.amount_untaxed ?? 0,
+    totalTVA: head.amount_tax ?? 0,
+    totalTTC: head.amount_total ?? 0,
+  };
 }

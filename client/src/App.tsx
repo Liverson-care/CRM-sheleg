@@ -9,6 +9,7 @@ import ProductDetail from './pages/ProductDetail';
 import DevisEditor from './pages/DevisEditor';
 import Confirmation from './pages/Confirmation';
 import Orders from './pages/Orders';
+import OrderDetailPage from './pages/OrderDetail';
 
 export default function App() {
   const { user } = useAuth();
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/devis" element={<DevisEditor />} />
         <Route path="/devis/confirmation" element={<Confirmation />} />
         <Route path="/commandes" element={<Orders />} />
+        <Route path="/commande/:id" element={<OrderDetailPage />} />
         <Route path="*" element={<Navigate to="/catalogue" replace />} />
       </Route>
     </Routes>

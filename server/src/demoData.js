@@ -201,5 +201,52 @@ for (const p of demoProducts) {
   p.vat = VAT_20.has(p.id) ? 20 : 5.5;
 }
 
-// Stockage en mémoire des commandes créées en mode démo.
-export const demoOrders = [];
+// Commandes de démonstration (créées en mémoire + quelques exemples variés).
+export const demoOrders = [
+  {
+    id: 8802,
+    reference: 'S00042',
+    clientId: 102,
+    client: 'Épicerie Cohen',
+    lines: [
+      { productId: 204, name: 'Pain challah 500g', qty: 6, price: 4.5, discount: 0, vat: 5.5 },
+      { productId: 203, name: 'Houmous nature 250g', qty: 10, price: 2.5, discount: 0, vat: 5.5 },
+    ],
+    globalDiscount: 0,
+    comment: '',
+    deliveryDate: '2026-09-02',
+    state: 'draft', // Envoyée
+    date: '2026-08-30T14:12:00.000Z',
+  },
+  {
+    id: 8801,
+    reference: 'S00041',
+    clientId: 103,
+    client: 'Casher Express',
+    lines: [
+      { productId: 206, name: 'Huile d’olive extra vierge 75cl', qty: 6, price: 9.9, discount: 0, vat: 5.5 },
+      { productId: 207, name: 'Tahini 500g', qty: 10, price: 5.4, discount: 5, vat: 5.5 },
+    ],
+    globalDiscount: 0,
+    comment: 'Livraison en matinée',
+    deliveryDate: '2026-08-29',
+    state: 'sale', // Confirmée
+    date: '2026-08-28T09:40:00.000Z',
+  },
+  {
+    id: 8800,
+    reference: 'S00040',
+    clientId: 104,
+    client: 'Boucherie Lévy',
+    lines: [
+      { productId: 210, name: 'Boulettes de viande surgelées 1kg', qty: 5, price: 12.5, discount: 0, vat: 5.5 },
+      { productId: 201, name: 'Vin rouge cacher Cabernet 75cl', qty: 12, price: 8.9, discount: 10, vat: 20 },
+    ],
+    globalDiscount: 0,
+    comment: '',
+    deliveryDate: '2026-08-25',
+    state: 'sale',
+    deliveryStatus: 'full', // Livrée
+    date: '2026-08-24T11:05:00.000Z',
+  },
+];

@@ -3,16 +3,16 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './auth';
-import { CartProvider } from './cart';
+import { OrderProvider } from './order';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <CartProvider>
+        <OrderProvider>
           <App />
-        </CartProvider>
+        </OrderProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>

@@ -75,8 +75,10 @@ export const api = {
 
   createOrder(payload: {
     clientId: number;
-    lines: { productId: number; qty: number; price: number; name: string }[];
-    note?: string;
+    lines: { productId: number; qty: number; price: number; name: string; discount: number; vat: number }[];
+    comment?: string;
+    deliveryDate?: string;
+    globalDiscount?: number;
   }) {
     return request<CreatedOrder>('/api/orders', {
       method: 'POST',

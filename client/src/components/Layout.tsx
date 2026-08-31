@@ -1,11 +1,11 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
-import { useCart } from '../cart';
+import { useOrder } from '../order';
 import Logo from './Logo';
 
 export default function Layout() {
   const { logout } = useAuth();
-  const { count } = useCart();
+  const { totals } = useOrder();
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -39,15 +39,11 @@ export default function Layout() {
           <TabIcon name="catalog" />
           <span>Catalogue</span>
         </NavLink>
-        <NavLink to="/panier" className="tab">
-          <span className="tab-badge-wrap">
-            <TabIcon name="cart" />
-            {count > 0 && <span className="badge">{count}</span>}
-          </span>
-          <span>Panier</span>
-        </NavLink>
         <NavLink to="/commandes" className="tab">
-          <TabIcon name="orders" />
+          <span className="tab-badge-wrap">
+            <TabIcon name="orders" />
+            {totals.count > 0 && <span className="badge">{totals.count}</span>}
+          </span>
           <span>Commandes</span>
         </NavLink>
       </nav>

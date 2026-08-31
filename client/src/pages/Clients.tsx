@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { useCart } from '../cart';
+import { useOrder } from '../order';
 import type { Client } from '../types';
 
 export default function Clients() {
-  const { client } = useCart();
+  const { draft } = useOrder();
+  const client = draft?.client ?? null;
   const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');

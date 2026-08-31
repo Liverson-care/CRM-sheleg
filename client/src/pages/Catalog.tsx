@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { useCart } from '../cart';
+import { useOrder } from '../order';
 import { formatEuro } from '../util';
 import ProductImage from '../components/ProductImage';
 import type { Product } from '../types';
 
 export default function Catalog() {
-  const { client, lines } = useCart();
+  const { draft, totals } = useOrder();
+  const client = draft?.client ?? null;
+  const lines = draft?.lines ?? [];
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
@@ -146,6 +148,15 @@ export default function Catalog() {
           <div className="empty">Aucun produit trouvé.</div>
         )}
       </div>
+
+      {totals.count > 0 && (
+        <button className="draft-bar" onClick={() => navigate('/devis')}>
+          <span className="draft-bar-count">{totals.count}</span>
+          <span className="draft-bar-label">Devis en cours</span>
+          <span className="draft-bar-total">{formatEuro(totals.totalTTC)} TTC</span>
+          <span className="draft-bar-go">Voir le devis →</span>
+        </button>
+      )}
     </div>
   );
 }

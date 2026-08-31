@@ -195,5 +195,11 @@ export const demoProducts = [
   },
 ];
 
+// Taux de TVA par produit : alcool à 20 %, alimentaire à 5,5 % (France).
+const VAT_20 = new Set([201]); // Vin
+for (const p of demoProducts) {
+  p.vat = VAT_20.has(p.id) ? 20 : 5.5;
+}
+
 // Stockage en mémoire des commandes créées en mode démo.
 export const demoOrders = [];

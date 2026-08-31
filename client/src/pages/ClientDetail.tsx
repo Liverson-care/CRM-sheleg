@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { useCart } from '../cart';
-import { formatEuro, formatDate, orderStateLabel } from '../util';
+import { useOrder } from '../order';
+import { formatEuro, formatDate, orderStatusLabel } from '../util';
 import type { Client, OrderSummary } from '../types';
 
 export default function ClientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { setClient } = useCart();
+  const { setClient } = useOrder();
 
   const [client, setLocalClient] = useState<Client | null>(null);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
@@ -192,7 +192,7 @@ export default function ClientDetail() {
                 </div>
                 <div className="order-right">
                   <div className="order-total">{formatEuro(o.total)}</div>
-                  <span className={`state state-${o.state}`}>{orderStateLabel(o.state)}</span>
+                  <span className={`state state-${o.status}`}>{orderStatusLabel(o.status)}</span>
                 </div>
               </div>
             ))}

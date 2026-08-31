@@ -15,6 +15,8 @@ const config = {
     user: process.env.DEMO_USER || 'sheleg',
     password: process.env.DEMO_PASSWORD || 'sheleg',
   },
+  // Taux de TVA par défaut (%) appliqué aux produits Odoo sans taux explicite.
+  defaultVat: Number(process.env.DEFAULT_VAT_RATE || 5.5),
 };
 
 /**

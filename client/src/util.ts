@@ -18,13 +18,12 @@ export function formatDate(iso: string): string {
   }).format(d);
 }
 
-export function orderStateLabel(state: string): string {
+export function orderStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    draft: 'Devis',
-    sent: 'Devis envoyé',
-    sale: 'Confirmée',
-    done: 'Terminée',
-    cancel: 'Annulée',
+    devis: 'Devis',
+    envoyee: 'Envoyée',
+    confirmee: 'Confirmée',
+    annulee: 'Annulée',
   };
-  return map[state] || state;
+  return map[status] || status;
 }

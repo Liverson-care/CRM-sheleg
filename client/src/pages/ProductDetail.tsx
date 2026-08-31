@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { useCart } from '../cart';
+import { useOrder } from '../order';
 import { formatEuro } from '../util';
 import ProductImage from '../components/ProductImage';
 import type { Product } from '../types';
@@ -9,7 +9,8 @@ import type { Product } from '../types';
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { lines, addProduct, setQty } = useCart();
+  const { draft, addProduct, setQty } = useOrder();
+  const lines = draft?.lines ?? [];
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +63,7 @@ export default function ProductDetail() {
 
           {qty === 0 ? (
             <button className="btn-primary btn-block" onClick={() => addProduct(product)}>
-              Ajouter au panier
+              Ajouter au devis
             </button>
           ) : (
             <div className="detail-cart-row">
@@ -71,8 +72,8 @@ export default function ProductDetail() {
                 <span>{qty}</span>
                 <button onClick={() => setQty(product.id, qty + 1)}>+</button>
               </div>
-              <button className="btn-ghost" onClick={() => navigate('/panier')}>
-                Voir le panier
+              <button className="btn-ghost" onClick={() => navigate('/devis')}>
+                Voir le devis
               </button>
             </div>
           )}

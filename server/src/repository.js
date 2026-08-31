@@ -51,7 +51,16 @@ function normalizeProduct(product) {
     qty_available: product.qty_available ?? 0,
     image: productImage(product),
     description: product.description_sale || product.description || '',
+    // Taux de TVA (%) : explicite en démo, sinon taux par défaut (Odoo recalcule).
+    vat: product.vat ?? config.defaultVat,
   };
+}
+
+// Mappe l'état Odoo d'une commande vers un statut applicatif.
+function orderStatus(state) {
+  if (state === 'sale' || state === 'done') return 'confirmee';
+  if (state === 'cancel') return 'annulee';
+  return 'envoyee'; // draft / sent = envoyée à Odoo, en attente de confirmation
 }
 
 // ---------- Clients ----------
@@ -201,12 +210,31 @@ export async function getProductById(id) {
 // ---------- Commandes ----------
 
 /**
- * Crée une commande.
- * @param {Object} order  { clientId, lines: [{ productId, qty, price, name }], note, salesperson }
+ * Combine une remise de ligne et une remise globale en un seul pourcentage.
+ * effectif = 1 - (1 - ligne%)(1 - globale%)
+ */
+function combinedDiscount(lineDiscount = 0, globalDiscount = 0) {
+  const d = 1 - (1 - lineDiscount / 100) * (1 - globalDiscount / 100);
+  return Math.round(d * 10000) / 100; // % avec 2 décimales
+}
+
+/**
+ * Crée une commande dans Odoo (à l'envoi d'un devis finalisé).
+ * @param {Object} order {
+ *   clientId, lines:[{ productId, qty, price, name, discount, vat }],
+ *   comment, deliveryDate, globalDiscount, salesperson
+ * }
  * @returns {Object} { id, reference }
  */
 export async function createOrder(order) {
-  const { clientId, lines, note = '', salesperson = '' } = order;
+  const {
+    clientId,
+    lines,
+    comment = '',
+    deliveryDate = '',
+    globalDiscount = 0,
+    salesperson = '',
+  } = order;
 
   if (!clientId) throw new Error('Client manquant');
   if (!Array.isArray(lines) || lines.length === 0) {
@@ -215,25 +243,36 @@ export async function createOrder(order) {
 
   if (!config.odooEnabled) {
     const id = 9000 + demoOrders.length + 1;
-    const reference = `DEMO-${String(id)}`;
-    const total = lines.reduce((sum, l) => sum + l.qty * l.price, 0);
+    const reference = `S${String(id).padStart(5, '0')}`;
+    const totalHT = lines.reduce((sum, l) => {
+      const disc = combinedDiscount(l.discount, globalDiscount) / 100;
+      return sum + l.qty * l.price * (1 - disc);
+    }, 0);
+    const totalTVA = lines.reduce((sum, l) => {
+      const disc = combinedDiscount(l.discount, globalDiscount) / 100;
+      return sum + l.qty * l.price * (1 - disc) * ((l.vat ?? config.defaultVat) / 100);
+    }, 0);
     const record = {
       id,
       reference,
       clientId,
       client: demoClients.find((c) => c.id === clientId)?.name || 'Client',
       lines,
-      note,
+      comment,
+      deliveryDate,
+      globalDiscount,
       salesperson,
-      total,
-      state: 'draft',
+      total: totalHT + totalTVA,
+      totalHT,
+      totalTVA,
+      state: 'draft', // envoyée à Odoo ; le back-office confirmera
       date: new Date().toISOString(),
     };
     demoOrders.unshift(record);
-    return { id, reference };
+    return { id, reference, status: 'envoyee' };
   }
 
-  // Odoo : création d'un sale.order avec ses lignes.
+  // Odoo : création d'un sale.order avec ses lignes et remises.
   const orderLines = lines.map((l) => [
     0,
     0,
@@ -241,28 +280,30 @@ export async function createOrder(order) {
       product_id: l.productId,
       product_uom_qty: l.qty,
       price_unit: l.price,
+      discount: combinedDiscount(l.discount, globalDiscount),
       ...(l.name ? { name: l.name } : {}),
     },
   ]);
 
-  const values = {
-    partner_id: clientId,
-    order_line: orderLines,
-  };
-  if (note) values.note = note;
+  const values = { partner_id: clientId, order_line: orderLines };
+  if (comment) values.note = comment;
+  if (deliveryDate) values.commitment_date = deliveryDate; // date de livraison
 
   const orderId = await odoo.executeKw('sale.order', 'create', [values]);
   const [created] = await odoo.executeKw('sale.order', 'read', [[orderId]], {
     fields: ['name'],
   });
-  return { id: orderId, reference: created?.name || String(orderId) };
+  return { id: orderId, reference: created?.name || String(orderId), status: 'envoyee' };
 }
 
 export async function getOrders({ clientId } = {}) {
   const filterId = clientId ? Number(clientId) : null;
 
   if (!config.odooEnabled) {
-    return filterId ? demoOrders.filter((o) => o.clientId === filterId) : demoOrders;
+    const list = filterId
+      ? demoOrders.filter((o) => o.clientId === filterId)
+      : demoOrders;
+    return list.map((o) => ({ ...o, status: orderStatus(o.state) }));
   }
 
   const domain = filterId ? [['partner_id', '=', filterId]] : [];
@@ -277,6 +318,7 @@ export async function getOrders({ clientId } = {}) {
     client: Array.isArray(o.partner_id) ? o.partner_id[1] : '',
     total: o.amount_total ?? 0,
     state: o.state,
+    status: orderStatus(o.state),
     date: o.date_order,
   }));
 }

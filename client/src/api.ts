@@ -64,6 +64,10 @@ export const api = {
     return request<Product[]>(`/api/products${q}`);
   },
 
+  getProduct(id: number) {
+    return request<Product>(`/api/products/${id}`);
+  },
+
   getOrders(clientId?: number) {
     const q = clientId ? `?clientId=${clientId}` : '';
     return request<OrderSummary[]>(`/api/orders${q}`);

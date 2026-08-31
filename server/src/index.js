@@ -12,6 +12,7 @@ import {
   getClients,
   getClientById,
   getProducts,
+  getProductById,
   createOrder,
   getOrders,
 } from './repository.js';
@@ -84,6 +85,16 @@ app.get('/api/products', requireAuth, async (req, res) => {
   try {
     const products = await getProducts({ search: req.query.search || '' });
     res.json(products);
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+app.get('/api/products/:id', requireAuth, async (req, res) => {
+  try {
+    const product = await getProductById(req.params.id);
+    if (!product) return res.status(404).json({ error: 'Produit introuvable' });
+    res.json(product);
   } catch (err) {
     res.status(502).json({ error: err.message });
   }

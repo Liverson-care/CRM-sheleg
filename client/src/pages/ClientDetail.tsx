@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useCart } from '../cart';
@@ -14,6 +14,16 @@ export default function ClientDetail() {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [gpsOpen, setGpsOpen] = useState(false);
+  const gpsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (gpsRef.current && !gpsRef.current.contains(e.target as Node)) setGpsOpen(false);
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -42,6 +52,16 @@ export default function ClientDetail() {
     client.street,
     [client.zip, client.city].filter(Boolean).join(' '),
   ].filter(Boolean);
+
+  const dest = encodeURIComponent(
+    [client.street, client.zip, client.city].filter(Boolean).join(', ')
+  );
+  const mapUrls = {
+    google: `https://www.google.com/maps/dir/?api=1&destination=${dest}`,
+    waze: `https://waze.com/ul?q=${dest}&navigate=yes`,
+    apple: `https://maps.apple.com/?daddr=${dest}`,
+  };
+  const hasAddress = addressLines.length > 0;
 
   return (
     <div className="page">
@@ -80,6 +100,19 @@ export default function ClientDetail() {
           <ActionIcon name="phone" />
           <span>Appeler</span>
         </a>
+        <div className={`action-gps ${hasAddress ? '' : 'action-disabled'}`} ref={gpsRef}>
+          <button className="action" onClick={() => setGpsOpen((o) => !o)}>
+            <ActionIcon name="gps" />
+            <span>Itinéraire</span>
+          </button>
+          {gpsOpen && (
+            <div className="gps-menu">
+              <a href={mapUrls.waze} target="_blank" rel="noreferrer" onClick={() => setGpsOpen(false)}>Waze</a>
+              <a href={mapUrls.google} target="_blank" rel="noreferrer" onClick={() => setGpsOpen(false)}>Google Maps</a>
+              <a href={mapUrls.apple} target="_blank" rel="noreferrer" onClick={() => setGpsOpen(false)}>Plan (Apple)</a>
+            </div>
+          )}
+        </div>
         <a className="action" href="#historique">
           <ActionIcon name="history" />
           <span>Historique</span>
@@ -221,6 +254,13 @@ function ActionIcon({ name }: { name: string }) {
         <svg {...common}>
           <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
           <path d="M3 4v4h4M12 8v4l3 2" />
+        </svg>
+      );
+    case 'gps':
+      return (
+        <svg {...common}>
+          <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+          <circle cx="12" cy="10" r="2.5" />
         </svg>
       );
     default:

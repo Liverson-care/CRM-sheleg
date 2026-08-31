@@ -30,6 +30,13 @@ function normalizeClient(partner) {
   };
 }
 
+function productImage(product) {
+  // Odoo renvoie les images en base64 ; on construit une URL de données.
+  const raw = product.image_512 || product.image_256 || product.image_128;
+  if (typeof raw === 'string' && raw) return `data:image/png;base64,${raw}`;
+  return product.image || '';
+}
+
 function normalizeProduct(product) {
   return {
     id: product.id,
@@ -42,6 +49,8 @@ function normalizeProduct(product) {
       : product.category || 'Divers',
     uom: Array.isArray(product.uom_id) ? product.uom_id[1] : product.uom || '',
     qty_available: product.qty_available ?? 0,
+    image: productImage(product),
+    description: product.description_sale || product.description || '',
   };
 }
 
@@ -137,20 +146,56 @@ export async function getProducts({ search = '' } = {}) {
     );
   }
   const products = await odoo.executeKw('product.product', 'search_read', [domain], {
-    fields: [
-      'id',
-      'name',
-      'default_code',
-      'barcode',
-      'list_price',
-      'categ_id',
-      'uom_id',
-      'qty_available',
-    ],
+    fields: PRODUCT_LIST_FIELDS,
     limit: 1000,
     order: 'name asc',
   });
   return products.map(normalizeProduct);
+}
+
+// Vignette (image_128) pour la liste ; image_512 + description pour la fiche.
+const PRODUCT_LIST_FIELDS = [
+  'id',
+  'name',
+  'default_code',
+  'barcode',
+  'list_price',
+  'categ_id',
+  'uom_id',
+  'qty_available',
+  'image_128',
+];
+const PRODUCT_DETAIL_FIELDS = [
+  'id',
+  'name',
+  'default_code',
+  'barcode',
+  'list_price',
+  'categ_id',
+  'uom_id',
+  'qty_available',
+  'image_512',
+  'description_sale',
+];
+
+/** Récupère un produit par son identifiant (fiche détaillée). */
+export async function getProductById(id) {
+  const pid = Number(id);
+  if (!config.odooEnabled) {
+    const p = demoProducts.find((x) => x.id === pid);
+    return p ? normalizeProduct(p) : null;
+  }
+  let rows;
+  try {
+    rows = await odoo.executeKw('product.product', 'read', [[pid]], {
+      fields: PRODUCT_DETAIL_FIELDS,
+    });
+  } catch {
+    rows = await odoo.executeKw('product.product', 'read', [[pid]], {
+      fields: PRODUCT_LIST_FIELDS,
+    });
+  }
+  return rows.length ? normalizeProduct(rows[0]) : null;
 }
 
 // ---------- Commandes ----------

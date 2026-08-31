@@ -23,6 +23,8 @@ export interface Product {
   category: string;
   uom: string;
   qty_available: number;
+  image?: string;
+  description?: string;
 }
 
 export interface CartLine {

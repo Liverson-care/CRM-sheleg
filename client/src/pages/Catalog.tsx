@@ -1,17 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useCart } from '../cart';
 import { formatEuro } from '../util';
+import ProductImage from '../components/ProductImage';
 import type { Product } from '../types';
 
 export default function Catalog() {
-  const { client, lines, addProduct, setQty } = useCart();
+  const { client, lines } = useCart();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Tous');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -25,6 +29,16 @@ export default function Catalog() {
     }, 250);
     return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
 
   const categories = useMemo(() => {
     const set = new Set(products.map((p) => p.category).filter(Boolean));
@@ -40,16 +54,40 @@ export default function Catalog() {
     return lines.find((l) => l.product.id === id)?.qty ?? 0;
   }
 
+  async function runExport(kind: 'pdf' | 'excel', withPrices: boolean) {
+    setMenuOpen(false);
+    const mod = await import('../export');
+    if (kind === 'pdf') mod.exportPDF(filtered, { withPrices });
+    else mod.exportExcel(filtered, { withPrices });
+  }
+
   return (
     <div className="page">
       <div className="page-head">
         <h2>Catalogue</h2>
-        <input
-          className="search"
-          placeholder="Rechercher (nom, code, code-barres)…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="head-tools">
+          <input
+            className="search"
+            placeholder="Rechercher (nom, code, code-barres)…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="export-wrap" ref={menuRef}>
+            <button className="btn-ghost btn-export" onClick={() => setMenuOpen((o) => !o)}>
+              <ExportIcon /> Exporter
+            </button>
+            {menuOpen && (
+              <div className="export-menu">
+                <div className="export-menu-head">Format PDF</div>
+                <button onClick={() => runExport('pdf', true)}>PDF · avec prix</button>
+                <button onClick={() => runExport('pdf', false)}>PDF · sans prix</button>
+                <div className="export-menu-head">Format Excel</div>
+                <button onClick={() => runExport('excel', true)}>Excel · avec prix</button>
+                <button onClick={() => runExport('excel', false)}>Excel · sans prix</button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="client-banner">
@@ -90,31 +128,18 @@ export default function Catalog() {
         {filtered.map((p) => {
           const q = qtyInCart(p.id);
           return (
-            <div key={p.id} className={`product-card ${q > 0 ? 'in-cart' : ''}`}>
+            <button
+              key={p.id}
+              className={`product-card ${q > 0 ? 'in-cart' : ''}`}
+              onClick={() => navigate(`/produit/${p.id}`)}
+            >
+              {q > 0 && <span className="cart-flag">×{q}</span>}
+              <ProductImage product={p} size="card" />
               <div className="product-cat">{p.category}</div>
               <div className="product-name">{p.name}</div>
-              <div className="product-meta">
-                {p.default_code && <span className="code">{p.default_code}</span>}
-              </div>
-              <div className="product-foot">
-                <div className="price">{formatEuro(p.list_price)}</div>
-                {q === 0 ? (
-                  <button className="btn-primary btn-add" onClick={() => addProduct(p)}>
-                    Ajouter
-                  </button>
-                ) : (
-                  <div className="stepper">
-                    <button onClick={() => setQty(p.id, q - 1)} aria-label="Retirer un">
-                      −
-                    </button>
-                    <span>{q}</span>
-                    <button onClick={() => setQty(p.id, q + 1)} aria-label="Ajouter un">
-                      +
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+              {p.default_code && <span className="code">{p.default_code}</span>}
+              <div className="price">{formatEuro(p.list_price)}</div>
+            </button>
           );
         })}
         {!loading && filtered.length === 0 && (
@@ -122,5 +147,23 @@ export default function Catalog() {
         )}
       </div>
     </div>
+  );
+}
+
+function ExportIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3v12M8 11l4 4 4-4" />
+      <path d="M5 21h14" />
+    </svg>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useOrder } from '../order';
-import { formatEuro } from '../util';
+import { formatEuro, unitPrice, packSize } from '../util';
 import ClientPickerModal from '../components/ClientPickerModal';
 
 export default function DevisEditor() {
@@ -61,7 +61,10 @@ export default function DevisEditor() {
             <div className="cart-line-main">
               <div className="list-title">{l.product.name}</div>
               <div className="list-sub">
-                {formatEuro(l.product.list_price)} / colis · {l.product.default_code}
+                {formatEuro(unitPrice(l.product))} / pièce · {packSize(l.product)} pcs/colis
+              </div>
+              <div className="list-sub">
+                {l.qty} colis = {l.qty * packSize(l.product)} pièces
               </div>
             </div>
             <div className="stepper">
@@ -69,7 +72,10 @@ export default function DevisEditor() {
               <span>{l.qty}</span>
               <button onClick={() => setQty(l.product.id, l.qty + 1)}>+</button>
             </div>
-            <div className="cart-line-total">{formatEuro(l.qty * l.product.list_price)}</div>
+            <div className="cart-line-total">
+              {formatEuro(l.qty * l.product.list_price)}
+              <span className="ht-tag">HT</span>
+            </div>
             <button
               className="icon-remove"
               onClick={() => setQty(l.product.id, 0)}

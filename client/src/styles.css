@@ -326,6 +326,209 @@ button.list-row:active {
   border-radius: 20px;
 }
 
+.price-unit {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* ---------------- Aperçu du catalogue ---------------- */
+
+.modal-preview {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  max-height: 82vh;
+}
+
+.preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.preview-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.toggle-prices {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.toggle-prices input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--sheleg-700);
+}
+
+.preview-body {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  background: var(--sheleg-50);
+}
+
+.preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--card);
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.preview-row:last-child {
+  margin-bottom: 0;
+}
+
+.preview-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-price {
+  font-weight: 800;
+  color: var(--sheleg-900);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-price span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.preview-actions .btn-primary {
+  flex: 1;
+}
+
+/* ---------------- Accueil / tableau de bord ---------------- */
+
+.home-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.home-hello {
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.home-hero h2 {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 560px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.kpi {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  text-align: left;
+  font-family: inherit;
+}
+
+button.kpi {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+button.kpi:hover {
+  border-color: var(--sheleg-300);
+}
+
+.kpi-accent {
+  background: linear-gradient(140deg, var(--sheleg-700), var(--sheleg-900));
+  border-color: transparent;
+  color: #fff;
+}
+
+.kpi-value {
+  font-size: 30px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.kpi-label {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.kpi-accent .kpi-label {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ca-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+
+.ca-label {
+  font-weight: 700;
+  color: var(--sheleg-900);
+}
+
+.ca-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+.ca-value {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--sheleg-900);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------------- Fiche client ---------------- */
 
 .detail-back {
@@ -1365,6 +1568,14 @@ a.btn-disabled {
   color: var(--sheleg-900);
   min-width: 76px;
   text-align: right;
+}
+
+.ht-tag {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  letter-spacing: 0.5px;
 }
 
 .icon-remove {

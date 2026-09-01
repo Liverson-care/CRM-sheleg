@@ -2,13 +2,17 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Product, OrderDetail } from './types';
-import { formatEuro, orderStatusLabel } from './util';
+import { formatEuro, orderStatusLabel, unitPrice, packSize } from './util';
 
 interface ExportOptions {
   withPrices: boolean;
 }
 
 const DATE = () => new Date().toLocaleDateString('fr-FR');
+
+function catalogueFileName(withPrices: boolean, ext: string) {
+  return `catalogue-sheleg-${withPrices ? 'avec-prix' : 'sans-prix'}.${ext}`;
+}
 
 /** Export du catalogue au format Excel (.xlsx). */
 export function exportExcel(products: Product[], { withPrices }: ExportOptions) {
@@ -18,20 +22,20 @@ export function exportExcel(products: Product[], { withPrices }: ExportOptions) 
       Code: p.default_code,
       Produit: p.name,
       'Code-barres': p.barcode,
-      Unité: p.uom,
+      'Pièces/colis': packSize(p),
     };
-    if (withPrices) row['Prix (€)'] = p.list_price;
+    if (withPrices) row['Prix unité (€)'] = Number(unitPrice(p).toFixed(2));
     return row;
   });
 
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Catalogue');
-  XLSX.writeFile(wb, `catalogue-sheleg-${withPrices ? 'avec-prix' : 'sans-prix'}.xlsx`);
+  XLSX.writeFile(wb, catalogueFileName(withPrices, 'xlsx'));
 }
 
-/** Export du catalogue au format PDF. */
-export function exportPDF(products: Product[], { withPrices }: ExportOptions) {
+/** Construit le PDF du catalogue et renvoie le document jsPDF. */
+export function buildCataloguePDF(products: Product[], { withPrices }: ExportOptions): jsPDF {
   const doc = new jsPDF();
 
   doc.setFontSize(18);
@@ -42,12 +46,12 @@ export function exportPDF(products: Product[], { withPrices }: ExportOptions) {
   doc.text(`Édité le ${DATE()} · ${products.length} produits`, 14, 25);
 
   const head = withPrices
-    ? [['Catégorie', 'Code', 'Produit', 'Unité', 'Prix']]
-    : [['Catégorie', 'Code', 'Produit', 'Unité']];
+    ? [['Catégorie', 'Code', 'Produit', 'Pcs/colis', 'Prix / pièce']]
+    : [['Catégorie', 'Code', 'Produit', 'Pcs/colis']];
 
   const body = products.map((p) => {
-    const base = [p.category, p.default_code, p.name, p.uom];
-    return withPrices ? [...base, formatEuro(p.list_price)] : base;
+    const base = [p.category, p.default_code, p.name, String(packSize(p))];
+    return withPrices ? [...base, formatEuro(unitPrice(p))] : base;
   });
 
   autoTable(doc, {
@@ -57,10 +61,47 @@ export function exportPDF(products: Product[], { withPrices }: ExportOptions) {
     styles: { fontSize: 9, cellPadding: 3 },
     headStyles: { fillColor: [11, 92, 171], textColor: 255 },
     alternateRowStyles: { fillColor: [242, 248, 253] },
-    columnStyles: withPrices ? { 4: { halign: 'right' } } : {},
+    columnStyles: { 3: { halign: 'center' }, ...(withPrices ? { 4: { halign: 'right' } } : {}) },
   });
 
-  doc.save(`catalogue-sheleg-${withPrices ? 'avec-prix' : 'sans-prix'}.pdf`);
+  return doc;
+}
+
+/** Télécharge le catalogue en PDF. */
+export function exportPDF(products: Product[], opts: ExportOptions) {
+  buildCataloguePDF(products, opts).save(catalogueFileName(opts.withPrices, 'pdf'));
+}
+
+/** Envoie le catalogue au client en PDF depuis la tablette (partage / e-mail). */
+export async function shareCataloguePDF(
+  products: Product[],
+  opts: ExportOptions,
+  emails: string[]
+) {
+  const doc = buildCataloguePDF(products, opts);
+  const blob = doc.output('blob') as Blob;
+  const file = new File([blob], catalogueFileName(opts.withPrices, 'pdf'), {
+    type: 'application/pdf',
+  });
+  const subject = 'Catalogue Sheleg';
+  const text = 'Bonjour,\n\nVeuillez trouver ci-joint notre catalogue.\n\nCordialement,\nSheleg';
+
+  const nav = navigator as Navigator & {
+    canShare?: (data?: unknown) => boolean;
+    share?: (data?: unknown) => Promise<void>;
+  };
+  if (nav.canShare && nav.canShare({ files: [file] }) && nav.share) {
+    try {
+      await nav.share({ files: [file], title: subject, text });
+      return;
+    } catch {
+      /* partage annulé */
+    }
+  }
+  doc.save(file.name);
+  window.location.href = `mailto:${emails.join(',')}?subject=${encodeURIComponent(
+    subject
+  )}&body=${encodeURIComponent(text + '\n\n(Joindre le PDF téléchargé.)')}`;
 }
 
 /** Construit le PDF d'une commande et renvoie le document jsPDF. */

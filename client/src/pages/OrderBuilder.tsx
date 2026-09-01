@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useOrder } from '../order';
-import { formatEuro, stockLevel } from '../util';
+import { formatEuro, stockLevel, unitPrice, packSize } from '../util';
 import ProductImage from '../components/ProductImage';
 import ClientPickerModal from '../components/ClientPickerModal';
 import type { Product } from '../types';
@@ -97,8 +97,7 @@ export default function OrderBuilder() {
                 <div className="product-row-main">
                   <div className="product-name">{p.name}</div>
                   <div className="list-sub">
-                    {formatEuro(p.list_price)} / colis
-                    {p.default_code ? ` · ${p.default_code}` : ''}
+                    {formatEuro(unitPrice(p))} / pièce · {packSize(p)} pcs/colis
                   </div>
                   <span className={`stock-pill stock-${st.cls}`}>{st.label}</span>
                 </div>

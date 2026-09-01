@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useOrder, computeTotals } from '../order';
-import { formatEuro } from '../util';
+import { formatEuro, unitPrice, packSize } from '../util';
 import ClientPickerModal from '../components/ClientPickerModal';
 import type { Draft } from '../types';
 
@@ -211,7 +211,10 @@ export default function Confirmation() {
               <div className="conf-line-main">
                 <div className="list-title">{l.product.name}</div>
                 <div className="list-sub">
-                  {l.qty} colis × {formatEuro(l.product.list_price)} · TVA {l.product.vat ?? 20}%
+                  {formatEuro(unitPrice(l.product))} / pièce · {packSize(l.product)} pcs/colis · TVA {l.product.vat ?? 20}%
+                </div>
+                <div className="list-sub">
+                  {l.qty} colis = {l.qty * packSize(l.product)} pièces
                 </div>
               </div>
               <div className="conf-remise">

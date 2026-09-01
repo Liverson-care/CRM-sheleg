@@ -53,6 +53,9 @@ function normalizeProduct(product) {
     description: product.description_sale || product.description || '',
     // Taux de TVA (%) : explicite en démo, sinon taux par défaut (Odoo recalcule).
     vat: product.vat ?? config.defaultVat,
+    // Conditionnement : list_price est le prix du COLIS, unitPrice le prix/pièce.
+    packSize: product.packSize ?? 1,
+    unitPrice: (product.list_price ?? 0) / (product.packSize ?? 1),
   };
 }
 
@@ -371,15 +374,20 @@ export async function getOrderById(id) {
       comment: o.comment || '',
       globalDiscount: o.globalDiscount || 0,
       date: o.date,
-      lines: o.lines.map((l) => ({
-        name: l.name,
-        productId: l.productId,
-        qty: l.qty,
-        price: l.price,
-        discount: l.discount || 0,
-        vat: l.vat ?? config.defaultVat,
-        totalHT: l.qty * l.price * (1 - combinedFrac(l.discount, o.globalDiscount || 0)),
-      })),
+      lines: o.lines.map((l) => {
+        const pack = demoProducts.find((p) => p.id === l.productId)?.packSize ?? 1;
+        return {
+          name: l.name,
+          productId: l.productId,
+          qty: l.qty,
+          price: l.price,
+          packSize: pack,
+          unitPrice: l.price / pack,
+          discount: l.discount || 0,
+          vat: l.vat ?? config.defaultVat,
+          totalHT: l.qty * l.price * (1 - combinedFrac(l.discount, o.globalDiscount || 0)),
+        };
+      }),
       totalHT: t.ht,
       totalTVA: t.tva,
       totalTTC: t.ttc,
@@ -426,6 +434,8 @@ export async function getOrderById(id) {
       productId: Array.isArray(l.product_id) ? l.product_id[0] : undefined,
       qty: l.product_uom_qty,
       price: l.price_unit,
+      packSize: 1,
+      unitPrice: l.price_unit,
       discount: l.discount || 0,
       totalHT: l.price_subtotal ?? 0,
     })),

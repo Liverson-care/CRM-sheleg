@@ -98,8 +98,12 @@ export default function OrderDetailPage() {
               <div className="conf-line-main">
                 <div className="list-title">{l.name}</div>
                 <div className="list-sub">
-                  {l.qty} × {formatEuro(l.price)}
+                  {formatEuro(l.unitPrice ?? l.price / (l.packSize || 1))} / pièce
+                  {l.packSize && l.packSize > 1 ? ` · ${l.packSize} pcs/colis` : ''}
                   {l.discount ? ` · remise ${l.discount}%` : ''}
+                </div>
+                <div className="list-sub">
+                  {l.qty} colis{l.packSize && l.packSize > 1 ? ` = ${l.qty * l.packSize} pièces` : ''}
                 </div>
               </div>
               <div className="cart-line-total">{formatEuro(l.totalHT)}</div>

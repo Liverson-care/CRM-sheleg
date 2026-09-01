@@ -26,6 +26,8 @@ export interface Product {
   image?: string;
   description?: string;
   vat?: number; // taux de TVA en %
+  packSize?: number; // nombre de pièces par colis
+  unitPrice?: number; // prix à l'unité (list_price / packSize)
 }
 
 /** Ligne d'un devis en cours d'édition. */
@@ -64,6 +66,8 @@ export interface OrderDetailLine {
   productId?: number;
   qty: number;
   price: number;
+  packSize?: number;
+  unitPrice?: number;
   discount: number;
   vat?: number;
   totalHT: number;

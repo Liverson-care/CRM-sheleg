@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { formatEuro, stockLevel } from '../util';
+import { formatEuro, stockLevel, unitPrice, packSize } from '../util';
 import ProductImage from '../components/ProductImage';
 import type { Product } from '../types';
 
@@ -39,7 +39,9 @@ export default function ProductDetail() {
         <div className="product-detail-info">
           <div className="product-cat">{product.category}</div>
           <h2>{product.name}</h2>
-          <div className="price price-lg">{formatEuro(product.list_price)}</div>
+          <div className="price price-lg">
+            {formatEuro(unitPrice(product))}<span className="price-unit"> / pièce</span>
+          </div>
 
           {product.description && (
             <p className="product-desc">{product.description}</p>
@@ -48,7 +50,8 @@ export default function ProductDetail() {
           <div className="detail-card" style={{ marginTop: 4 }}>
             <InfoRow label="Référence" value={product.default_code || '—'} />
             <InfoRow label="Code-barres" value={product.barcode || '—'} />
-            <InfoRow label="Vendu par" value={product.uom || 'Colis'} />
+            <InfoRow label="Conditionnement" value={`${packSize(product)} pièces / colis`} />
+            <InfoRow label="Prix du colis" value={formatEuro(product.list_price)} />
             <div className="info-row">
               <span className="info-label">Stock disponible</span>
               <span className="info-value">

@@ -17,7 +17,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(username, password);
-      navigate('/catalogue', { replace: true });
+      navigate('/accueil', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connexion impossible');
     } finally {

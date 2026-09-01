@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import Home from './pages/Home';
 import Clients from './pages/Clients';
 import ClientDetail from './pages/ClientDetail';
 import Catalog from './pages/Catalog';
@@ -27,7 +28,8 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<Navigate to="/catalogue" replace />} />
+        <Route path="/" element={<Navigate to="/accueil" replace />} />
+        <Route path="/accueil" element={<Home />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/catalogue" element={<Catalog />} />
@@ -37,7 +39,7 @@ export default function App() {
         <Route path="/devis/confirmation" element={<Confirmation />} />
         <Route path="/commandes" element={<Orders />} />
         <Route path="/commande/:id" element={<OrderDetailPage />} />
-        <Route path="*" element={<Navigate to="/catalogue" replace />} />
+        <Route path="*" element={<Navigate to="/accueil" replace />} />
       </Route>
     </Routes>
   );

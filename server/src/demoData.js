@@ -201,6 +201,15 @@ for (const p of demoProducts) {
   p.vat = VAT_20.has(p.id) ? 20 : 5.5;
 }
 
+// Nombre de pièces par colis (conditionnement). list_price = prix du colis.
+const PACK_SIZE = {
+  201: 6, 202: 6, 203: 12, 204: 8, 205: 10, 206: 6,
+  207: 12, 208: 10, 209: 12, 210: 8, 211: 4, 212: 12,
+};
+for (const p of demoProducts) {
+  p.packSize = PACK_SIZE[p.id] || 1;
+}
+
 // Commandes de démonstration (créées en mémoire + quelques exemples variés).
 export const demoOrders = [
   {

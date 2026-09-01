@@ -31,6 +31,10 @@ export default function Layout() {
       </main>
 
       <nav className="tabbar">
+        <NavLink to="/accueil" className="tab">
+          <TabIcon name="home" />
+          <span>Accueil</span>
+        </NavLink>
         <NavLink to="/clients" className="tab">
           <TabIcon name="client" />
           <span>Clients</span>
@@ -63,6 +67,13 @@ function TabIcon({ name }: { name: string }) {
     strokeLinejoin: 'round' as const,
   };
   switch (name) {
+    case 'home':
+      return (
+        <svg {...common}>
+          <path d="M3 11l9-8 9 8" />
+          <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
+        </svg>
+      );
     case 'client':
       return (
         <svg {...common}>

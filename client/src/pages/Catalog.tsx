@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { formatEuro, stockLevel } from '../util';
+import { formatEuro, stockLevel, unitPrice, packSize } from '../util';
 import ProductImage from '../components/ProductImage';
-import type { Product } from '../types';
+import ClientPickerModal from '../components/ClientPickerModal';
+import type { Product, Client } from '../types';
 
 const VIEW_KEY = 'sheleg.catalogView';
 
@@ -14,7 +15,9 @@ export default function Catalog() {
   const [category, setCategory] = useState('Tous');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [withPrices, setWithPrices] = useState(true);
+  const [emailPickOpen, setEmailPickOpen] = useState(false);
   const [view, setView] = useState<'grid' | 'list'>(() => {
     try {
       return (localStorage.getItem(VIEW_KEY) as 'grid' | 'list') || 'grid';
@@ -22,7 +25,6 @@ export default function Catalog() {
       return 'grid';
     }
   });
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -36,16 +38,6 @@ export default function Catalog() {
     }, 250);
     return () => clearTimeout(timer);
   }, [search]);
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, []);
 
   function chooseView(v: 'grid' | 'list') {
     setView(v);
@@ -66,11 +58,17 @@ export default function Catalog() {
     [products, category]
   );
 
-  async function runExport(kind: 'pdf' | 'excel', withPrices: boolean) {
-    setMenuOpen(false);
+  async function saveCatalogue(kind: 'pdf' | 'excel') {
     const mod = await import('../export');
     if (kind === 'pdf') mod.exportPDF(filtered, { withPrices });
     else mod.exportExcel(filtered, { withPrices });
+  }
+
+  async function sendCatalogue(client: Client) {
+    setEmailPickOpen(false);
+    setPreviewOpen(false);
+    const mod = await import('../export');
+    await mod.shareCataloguePDF(filtered, { withPrices }, client.email ? [client.email] : []);
   }
 
   return (
@@ -102,21 +100,9 @@ export default function Catalog() {
               <ListIcon />
             </button>
           </div>
-          <div className="export-wrap" ref={menuRef}>
-            <button className="btn-ghost btn-export" onClick={() => setMenuOpen((o) => !o)}>
-              <ExportIcon /> Exporter
-            </button>
-            {menuOpen && (
-              <div className="export-menu">
-                <div className="export-menu-head">Format PDF</div>
-                <button onClick={() => runExport('pdf', true)}>PDF · avec prix</button>
-                <button onClick={() => runExport('pdf', false)}>PDF · sans prix</button>
-                <div className="export-menu-head">Format Excel</div>
-                <button onClick={() => runExport('excel', true)}>Excel · avec prix</button>
-                <button onClick={() => runExport('excel', false)}>Excel · sans prix</button>
-              </div>
-            )}
-          </div>
+          <button className="btn-ghost btn-export" onClick={() => setPreviewOpen(true)}>
+            <ExportIcon /> Catalogue
+          </button>
         </div>
       </div>
 
@@ -150,7 +136,7 @@ export default function Catalog() {
                 <div className="product-name">{p.name}</div>
                 {p.default_code && <span className="code">{p.default_code}</span>}
                 <div className="product-foot-row">
-                  <div className="price">{formatEuro(p.list_price)}</div>
+                  <div className="price">{formatEuro(unitPrice(p))}<span className="price-unit"> /pièce</span></div>
                   <span className={`stock-dot stock-${st.cls}`} title={st.label} />
                 </div>
               </button>
@@ -180,7 +166,8 @@ export default function Catalog() {
                   <span className={`stock-pill stock-${st.cls}`}>{st.label}</span>
                 </div>
                 <div className="product-row-right">
-                  <div className="price">{formatEuro(p.list_price)}</div>
+                  <div className="price">{formatEuro(unitPrice(p))}<span className="price-unit"> /pièce</span></div>
+                  <span className="code">{packSize(p)} pcs/colis</span>
                 </div>
               </button>
             );
@@ -189,6 +176,61 @@ export default function Catalog() {
             <div className="empty">Aucun produit trouvé.</div>
           )}
         </div>
+      )}
+
+      {previewOpen && (
+        <div className="modal-overlay" onClick={() => setPreviewOpen(false)}>
+          <div className="modal modal-preview" onClick={(e) => e.stopPropagation()}>
+            <div className="preview-head">
+              <h3>Aperçu du catalogue</h3>
+              <label className="toggle-prices">
+                <input
+                  type="checkbox"
+                  checked={withPrices}
+                  onChange={(e) => setWithPrices(e.target.checked)}
+                />
+                Afficher les prix
+              </label>
+            </div>
+
+            <div className="preview-body">
+              {filtered.map((p) => (
+                <div key={p.id} className="preview-row">
+                  <ProductImage product={p} size="thumb" />
+                  <div className="preview-row-main">
+                    <div className="product-name">{p.name}</div>
+                    <div className="list-sub">
+                      {p.default_code} · {packSize(p)} pcs/colis
+                    </div>
+                  </div>
+                  {withPrices && (
+                    <div className="preview-price">{formatEuro(unitPrice(p))}<span> /pièce</span></div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="preview-actions">
+              <button className="btn-primary" onClick={() => setEmailPickOpen(true)}>
+                Envoyer par e-mail
+              </button>
+              <button className="btn-ghost" onClick={() => saveCatalogue('pdf')}>
+                Enregistrer PDF
+              </button>
+              <button className="btn-ghost" onClick={() => saveCatalogue('excel')}>
+                Excel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {emailPickOpen && (
+        <ClientPickerModal
+          title="Envoyer le catalogue à…"
+          onPick={sendCatalogue}
+          onClose={() => setEmailPickOpen(false)}
+        />
       )}
     </div>
   );

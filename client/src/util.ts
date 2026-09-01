@@ -18,6 +18,18 @@ export function formatDate(iso: string): string {
   }).format(d);
 }
 
+import type { Product } from './types';
+
+/** Nombre de pièces par colis (défaut 1). */
+export function packSize(p: Product): number {
+  return p.packSize && p.packSize > 0 ? p.packSize : 1;
+}
+
+/** Prix à l'unité (par pièce) = prix du colis / nombre de pièces. */
+export function unitPrice(p: Product): number {
+  return p.unitPrice ?? p.list_price / packSize(p);
+}
+
 /**
  * Niveau de stock pour la pastille : vert (≥100), orange (<100), rouge (0).
  */

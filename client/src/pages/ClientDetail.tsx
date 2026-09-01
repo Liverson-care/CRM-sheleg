@@ -41,7 +41,7 @@ export default function ClientDetail() {
   function startOrder() {
     if (!client) return;
     setClient(client);
-    navigate('/catalogue');
+    navigate('/commande/produits');
   }
 
   if (loading) return <div className="page"><div className="muted">Chargement…</div></div>;

@@ -159,8 +159,9 @@ export default function Confirmation() {
 
   return (
     <div className="page">
-      <div className="detail-back">
+      <div className="detail-back detail-back-row">
         <Link to="/devis" className="link">← Devis</Link>
+        <Link to="/commande/produits" className="link">+ Ajouter des produits</Link>
       </div>
       <div className="page-head"><h2>Confirmer la commande</h2></div>
 
@@ -207,7 +208,7 @@ export default function Confirmation() {
               <div className="conf-line-main">
                 <div className="list-title">{l.product.name}</div>
                 <div className="list-sub">
-                  {l.qty} × {formatEuro(l.product.list_price)} · TVA {l.product.vat ?? 20}%
+                  {l.qty} colis × {formatEuro(l.product.list_price)} · TVA {l.product.vat ?? 20}%
                 </div>
               </div>
               <div className="conf-remise">

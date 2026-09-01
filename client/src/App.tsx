@@ -6,6 +6,7 @@ import Clients from './pages/Clients';
 import ClientDetail from './pages/ClientDetail';
 import Catalog from './pages/Catalog';
 import ProductDetail from './pages/ProductDetail';
+import OrderBuilder from './pages/OrderBuilder';
 import DevisEditor from './pages/DevisEditor';
 import Confirmation from './pages/Confirmation';
 import Orders from './pages/Orders';
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/catalogue" element={<Catalog />} />
         <Route path="/produit/:id" element={<ProductDetail />} />
+        <Route path="/commande/produits" element={<OrderBuilder />} />
         <Route path="/devis" element={<DevisEditor />} />
         <Route path="/devis/confirmation" element={<Confirmation />} />
         <Route path="/commandes" element={<Orders />} />

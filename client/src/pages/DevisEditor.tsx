@@ -16,7 +16,7 @@ export default function DevisEditor() {
         <div className="page-head"><h2>Devis en cours</h2></div>
         <div className="empty">
           Aucun devis en cours.{' '}
-          <Link to="/catalogue" className="link">Ajouter des produits</Link>
+          <Link to="/commandes" className="link">Créer une commande</Link>
         </div>
       </div>
     );
@@ -31,7 +31,7 @@ export default function DevisEditor() {
   function drop() {
     setAskLeave(false);
     deleteCurrent();
-    navigate('/catalogue');
+    navigate('/commandes');
   }
 
   return (
@@ -59,7 +59,7 @@ export default function DevisEditor() {
             <div className="cart-line-main">
               <div className="list-title">{l.product.name}</div>
               <div className="list-sub">
-                {formatEuro(l.product.list_price)} · {l.product.default_code}
+                {formatEuro(l.product.list_price)} / colis · {l.product.default_code}
               </div>
             </div>
             <div className="stepper">
@@ -78,6 +78,13 @@ export default function DevisEditor() {
           </div>
         ))}
       </div>
+
+      <button
+        className="btn-ghost btn-block btn-add-products"
+        onClick={() => navigate('/commande/produits')}
+      >
+        + Ajouter des produits
+      </button>
 
       <div className="cart-footer">
         <div className="cart-total">

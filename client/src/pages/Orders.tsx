@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useOrder, computeTotals } from '../order';
 import { formatEuro, formatDate, orderStatusLabel } from '../util';
-import type { OrderSummary, OrderStatus } from '../types';
+import type { OrderSummary, OrderStatus, Client } from '../types';
 
 type FilterKey = 'tous' | OrderStatus;
 
@@ -16,12 +16,16 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 export default function Orders() {
-  const { devisList, openDevis, removeDevis } = useOrder();
+  const { devisList, openDevis, removeDevis, setClient } = useOrder();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<FilterKey>('tous');
+
+  const [pickOpen, setPickOpen] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientSearch, setClientSearch] = useState('');
 
   useEffect(() => {
     api
@@ -30,6 +34,23 @@ export default function Orders() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (pickOpen && clients.length === 0) {
+      api.getClients().then(setClients).catch(() => {});
+    }
+  }, [pickOpen, clients.length]);
+
+  const filteredClients = useMemo(() => {
+    const s = clientSearch.trim().toLowerCase();
+    return s ? clients.filter((c) => c.name.toLowerCase().includes(s)) : clients;
+  }, [clients, clientSearch]);
+
+  function startNewOrder(c: Client) {
+    setClient(c);
+    setPickOpen(false);
+    navigate('/commande/produits');
+  }
 
   function reopen(id: string) {
     openDevis(id);
@@ -62,7 +83,12 @@ export default function Orders() {
 
   return (
     <div className="page">
-      <div className="page-head"><h2>Commandes</h2></div>
+      <div className="page-head">
+        <h2>Commandes</h2>
+        <button className="btn-primary btn-new-order" onClick={() => setPickOpen(true)}>
+          + Nouvelle commande
+        </button>
+      </div>
 
       <div className="chips">
         {FILTERS.map((f) => (
@@ -125,7 +151,38 @@ export default function Orders() {
       {empty && (
         <div className="empty">
           Aucune commande dans ce filtre.{' '}
-          <Link to="/catalogue" className="link">Créer une commande</Link>
+          <button className="link" onClick={() => setPickOpen(true)}>Nouvelle commande</button>
+        </div>
+      )}
+
+      {pickOpen && (
+        <div className="modal-overlay" onClick={() => setPickOpen(false)}>
+          <div className="modal modal-tall" onClick={(e) => e.stopPropagation()}>
+            <h3>Nouvelle commande — pour quel client ?</h3>
+            <input
+              className="search"
+              style={{ maxWidth: 'none', width: '100%', marginBottom: 10 }}
+              placeholder="Rechercher un client…"
+              value={clientSearch}
+              onChange={(e) => setClientSearch(e.target.value)}
+              autoFocus
+            />
+            <div className="pick-list">
+              {filteredClients.map((c) => (
+                <button key={c.id} className="pick-row" onClick={() => startNewOrder(c)}>
+                  <div className="avatar">{c.name.charAt(0).toUpperCase()}</div>
+                  <div className="list-main">
+                    <div className="list-title">{c.name}</div>
+                    <div className="list-sub">{[c.zip, c.city].filter(Boolean).join(' ')}</div>
+                  </div>
+                </button>
+              ))}
+              {filteredClients.length === 0 && <div className="muted">Aucun client.</div>}
+            </div>
+            <button className="btn-ghost btn-block" onClick={() => setPickOpen(false)}>
+              Annuler
+            </button>
+          </div>
         </div>
       )}
     </div>

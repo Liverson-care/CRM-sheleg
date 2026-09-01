@@ -80,7 +80,7 @@ export const demoProducts = [
     barcode: '3760001110017',
     list_price: 8.9,
     category: 'Boissons',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 240,
   },
   {
@@ -90,7 +90,7 @@ export const demoProducts = [
     barcode: '3760001110024',
     list_price: 3.2,
     category: 'Boissons',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 500,
   },
   {
@@ -100,7 +100,7 @@ export const demoProducts = [
     barcode: '3760001110031',
     list_price: 2.5,
     category: 'Frais',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 130,
   },
   {
@@ -110,7 +110,7 @@ export const demoProducts = [
     barcode: '3760001110048',
     list_price: 4.5,
     category: 'Boulangerie',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 80,
   },
   {
@@ -120,7 +120,7 @@ export const demoProducts = [
     barcode: '3760001110055',
     list_price: 6.9,
     category: 'Surgelés',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 60,
   },
   {
@@ -130,7 +130,7 @@ export const demoProducts = [
     barcode: '3760001110062',
     list_price: 9.9,
     category: 'Épicerie',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 320,
   },
   {
@@ -140,7 +140,7 @@ export const demoProducts = [
     barcode: '3760001110079',
     list_price: 5.4,
     category: 'Épicerie',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 210,
   },
   {
@@ -150,7 +150,7 @@ export const demoProducts = [
     barcode: '3760001110086',
     list_price: 7.5,
     category: 'Épicerie',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 175,
   },
   {
@@ -160,7 +160,7 @@ export const demoProducts = [
     barcode: '3760001110093',
     list_price: 3.9,
     category: 'Frais',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 95,
   },
   {
@@ -170,7 +170,7 @@ export const demoProducts = [
     barcode: '3760001110109',
     list_price: 12.5,
     category: 'Surgelés',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 45,
   },
   {
@@ -180,7 +180,7 @@ export const demoProducts = [
     barcode: '3760001110116',
     list_price: 3.6,
     category: 'Boissons',
-    uom: 'Pack',
+    uom: 'Colis',
     qty_available: 400,
   },
   {
@@ -190,7 +190,7 @@ export const demoProducts = [
     barcode: '3760001110123',
     list_price: 2.9,
     category: 'Épicerie',
-    uom: 'Unité(s)',
+    uom: 'Colis',
     qty_available: 260,
   },
 ];

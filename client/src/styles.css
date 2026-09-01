@@ -762,18 +762,82 @@ a.btn-disabled {
 }
 
 .state-envoyee {
-  background: #fff3dc;
+  background: #fef0d6;
   color: #b8791b;
 }
 
 .state-confirmee {
-  background: #dff5ea;
+  background: #e3f0fb;
+  color: var(--sheleg-700);
+}
+
+.state-livree {
+  background: #dcf5e8;
   color: var(--success);
 }
 
 .state-annulee {
   background: #fbe4e1;
   color: var(--danger);
+}
+
+/* ---------------- Construction de commande ---------------- */
+
+.product-row-tap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.order-add {
+  flex-shrink: 0;
+}
+
+.btn-add-round {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  background: var(--sheleg-700);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.05s;
+}
+
+.btn-add-round:hover {
+  background: var(--sheleg-900);
+}
+
+.btn-add-round:active {
+  transform: scale(0.94);
+}
+
+.btn-new-order {
+  padding: 10px 16px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.btn-add-products {
+  margin-bottom: 10px;
+}
+
+.detail-back-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 /* ---------------- Client banner ---------------- */

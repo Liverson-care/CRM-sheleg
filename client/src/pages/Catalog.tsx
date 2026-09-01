@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { useOrder } from '../order';
 import { formatEuro, stockLevel } from '../util';
 import ProductImage from '../components/ProductImage';
 import type { Product } from '../types';
@@ -9,8 +8,6 @@ import type { Product } from '../types';
 const VIEW_KEY = 'sheleg.catalogView';
 
 export default function Catalog() {
-  const { draft, totals } = useOrder();
-  const lines = draft?.lines ?? [];
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
@@ -68,10 +65,6 @@ export default function Catalog() {
     () => (category === 'Tous' ? products : products.filter((p) => p.category === category)),
     [products, category]
   );
-
-  function qtyInCart(id: number) {
-    return lines.find((l) => l.product.id === id)?.qty ?? 0;
-  }
 
   async function runExport(kind: 'pdf' | 'excel', withPrices: boolean) {
     setMenuOpen(false);
@@ -145,15 +138,13 @@ export default function Catalog() {
       {view === 'grid' ? (
         <div className="product-grid">
           {filtered.map((p) => {
-            const q = qtyInCart(p.id);
             const st = stockLevel(p.qty_available);
             return (
               <button
                 key={p.id}
-                className={`product-card ${q > 0 ? 'in-cart' : ''}`}
+                className="product-card"
                 onClick={() => navigate(`/produit/${p.id}`)}
               >
-                {q > 0 && <span className="cart-flag">×{q}</span>}
                 <ProductImage product={p} size="card" />
                 <div className="product-cat">{p.category}</div>
                 <div className="product-name">{p.name}</div>
@@ -172,12 +163,11 @@ export default function Catalog() {
       ) : (
         <div className="product-list">
           {filtered.map((p) => {
-            const q = qtyInCart(p.id);
             const st = stockLevel(p.qty_available);
             return (
               <button
                 key={p.id}
-                className={`product-row ${q > 0 ? 'in-cart' : ''}`}
+                className="product-row"
                 onClick={() => navigate(`/produit/${p.id}`)}
               >
                 <ProductImage product={p} size="thumb" />
@@ -191,7 +181,6 @@ export default function Catalog() {
                 </div>
                 <div className="product-row-right">
                   <div className="price">{formatEuro(p.list_price)}</div>
-                  {q > 0 && <span className="cart-flag-inline">×{q}</span>}
                 </div>
               </button>
             );
@@ -200,15 +189,6 @@ export default function Catalog() {
             <div className="empty">Aucun produit trouvé.</div>
           )}
         </div>
-      )}
-
-      {totals.count > 0 && (
-        <button className="draft-bar" onClick={() => navigate('/devis')}>
-          <span className="draft-bar-count">{totals.count}</span>
-          <span className="draft-bar-label">Devis en cours</span>
-          <span className="draft-bar-total">{formatEuro(totals.totalTTC)} TTC</span>
-          <span className="draft-bar-go">Voir le devis →</span>
-        </button>
       )}
     </div>
   );

@@ -88,6 +88,7 @@ interface OrderState {
   devisList: Draft[];
   totals: Totals;
   setClient: (c: Client) => void;
+  beginOrder: (c: Client) => void;
   addProduct: (p: Product, qty?: number) => void;
   setQty: (productId: number, qty: number) => void;
   setLineDiscount: (productId: number, pct: number) => void;
@@ -164,9 +165,23 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  /** Réaffecte le client du devis en cours (conserve les lignes). */
   function setClient(c: Client) {
     ensureDraft(c);
     mutate((d) => ({ ...d, client: c }));
+  }
+
+  /** Démarre un NOUVEAU devis pour ce client (l'ancien reste en devis). */
+  function beginOrder(c: Client) {
+    setDraft({
+      id: newId(),
+      client: c,
+      lines: [],
+      globalDiscount: 0,
+      deliveryDate: '',
+      comment: '',
+      updatedAt: Date.now(),
+    });
   }
 
   function addProduct(p: Product, qty = 1) {
@@ -304,6 +319,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         devisList,
         totals,
         setClient,
+        beginOrder,
         addProduct,
         setQty,
         setLineDiscount,

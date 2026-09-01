@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useOrder } from '../order';
 import { formatEuro } from '../util';
+import ClientPickerModal from '../components/ClientPickerModal';
 
 export default function DevisEditor() {
-  const { draft, totals, setQty, keepDraft, deleteCurrent } = useOrder();
+  const { draft, totals, setQty, setClient, keepDraft, deleteCurrent } = useOrder();
   const navigate = useNavigate();
   const [askLeave, setAskLeave] = useState(false);
+  const [pickOpen, setPickOpen] = useState(false);
 
   const lines = draft?.lines ?? [];
 
@@ -46,10 +48,10 @@ export default function DevisEditor() {
           <>
             <span className="muted">Client</span>
             <strong>{draft.client.name}</strong>
-            <Link to="/clients" className="link">Changer</Link>
+            <button className="link" onClick={() => setPickOpen(true)}>Changer</button>
           </>
         ) : (
-          <Link to="/clients" className="link">Sélectionner un client</Link>
+          <button className="link" onClick={() => setPickOpen(true)}>Sélectionner un client</button>
         )}
       </div>
 
@@ -120,6 +122,17 @@ export default function DevisEditor() {
             </div>
           </div>
         </div>
+      )}
+
+      {pickOpen && (
+        <ClientPickerModal
+          title="Changer le client du devis"
+          onPick={(c) => {
+            setClient(c);
+            setPickOpen(false);
+          }}
+          onClose={() => setPickOpen(false)}
+        />
       )}
     </div>
   );

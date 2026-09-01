@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useOrder } from '../order';
 import { formatEuro, stockLevel } from '../util';
 import ProductImage from '../components/ProductImage';
+import ClientPickerModal from '../components/ClientPickerModal';
 import type { Product } from '../types';
 
 export default function OrderBuilder() {
-  const { draft, totals, addProduct, setQty } = useOrder();
+  const { draft, totals, addProduct, setQty, setClient } = useOrder();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Tous');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pickOpen, setPickOpen] = useState(false);
 
   // Une commande se construit uniquement pour un client.
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function OrderBuilder() {
       <div className="client-banner">
         <span className="muted">Commande pour</span>
         <strong>{draft?.client?.name}</strong>
-        <Link to="/commandes" className="link">Changer</Link>
+        <button className="link" onClick={() => setPickOpen(true)}>Changer</button>
       </div>
 
       <div className="chips">
@@ -125,10 +127,21 @@ export default function OrderBuilder() {
       {totals.count > 0 && (
         <button className="draft-bar" onClick={() => navigate('/devis')}>
           <span className="draft-bar-count">{totals.count}</span>
-          <span className="draft-bar-label">{totals.count > 1 ? 'colis' : 'colis'} au devis</span>
+          <span className="draft-bar-label">colis au devis</span>
           <span className="draft-bar-total">{formatEuro(totals.totalTTC)} TTC</span>
           <span className="draft-bar-go">Voir le devis →</span>
         </button>
+      )}
+
+      {pickOpen && (
+        <ClientPickerModal
+          title="Changer le client du devis"
+          onPick={(c) => {
+            setClient(c);
+            setPickOpen(false);
+          }}
+          onClose={() => setPickOpen(false)}
+        />
       )}
     </div>
   );

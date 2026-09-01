@@ -16,7 +16,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 export default function Orders() {
-  const { devisList, openDevis, removeDevis, setClient } = useOrder();
+  const { devisList, openDevis, removeDevis, beginOrder } = useOrder();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +47,7 @@ export default function Orders() {
   }, [clients, clientSearch]);
 
   function startNewOrder(c: Client) {
-    setClient(c);
+    beginOrder(c);
     setPickOpen(false);
     navigate('/commande/produits');
   }

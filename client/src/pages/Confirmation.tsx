@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useOrder, computeTotals } from '../order';
 import { formatEuro } from '../util';
+import ClientPickerModal from '../components/ClientPickerModal';
 import type { Draft } from '../types';
 
 export default function Confirmation() {
@@ -12,12 +13,14 @@ export default function Confirmation() {
     setGlobalDiscount,
     setDeliveryDate,
     setComment,
+    setClient,
     send,
   } = useOrder();
   const navigate = useNavigate();
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [pickOpen, setPickOpen] = useState(false);
   const [sent, setSent] = useState<{ ref: string; snapshot: Draft } | null>(null);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
 
@@ -170,10 +173,10 @@ export default function Confirmation() {
           <>
             <span className="muted">Client</span>
             <strong>{draft.client.name}</strong>
-            <Link to="/clients" className="link">Changer</Link>
+            <button className="link" onClick={() => setPickOpen(true)}>Changer</button>
           </>
         ) : (
-          <Link to="/clients" className="link">Sélectionner un client</Link>
+          <button className="link" onClick={() => setPickOpen(true)}>Sélectionner un client</button>
         )}
       </div>
 
@@ -282,6 +285,17 @@ export default function Confirmation() {
       >
         {submitting ? 'Envoi à Odoo…' : 'Envoyer la commande'}
       </button>
+
+      {pickOpen && (
+        <ClientPickerModal
+          title="Changer le client du devis"
+          onPick={(c) => {
+            setClient(c);
+            setPickOpen(false);
+          }}
+          onClose={() => setPickOpen(false)}
+        />
+      )}
     </div>
   );
 }

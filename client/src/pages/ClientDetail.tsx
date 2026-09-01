@@ -8,7 +8,7 @@ import type { Client, OrderSummary } from '../types';
 export default function ClientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { setClient } = useOrder();
+  const { beginOrder } = useOrder();
 
   const [client, setLocalClient] = useState<Client | null>(null);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
@@ -40,7 +40,7 @@ export default function ClientDetail() {
 
   function startOrder() {
     if (!client) return;
-    setClient(client);
+    beginOrder(client);
     navigate('/commande/produits');
   }
 

@@ -5,7 +5,7 @@ import Logo from './Logo';
 
 export default function Layout() {
   const { logout } = useAuth();
-  const { totals } = useOrder();
+  const { devisList } = useOrder();
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -42,7 +42,7 @@ export default function Layout() {
         <NavLink to="/commandes" className="tab">
           <span className="tab-badge-wrap">
             <TabIcon name="orders" />
-            {totals.count > 0 && <span className="badge">{totals.count}</span>}
+            {devisList.length > 0 && <span className="badge">{devisList.length}</span>}
           </span>
           <span>Commandes</span>
         </NavLink>

@@ -259,6 +259,32 @@ export async function getProductById(id) {
 
 // ---------- Commandes ----------
 
+// Métadonnées du champ commercial (mises en cache après la 1re lecture).
+let commercialMeta; // undefined = pas encore lu ; null = champ absent
+async function resolveCommercial(value) {
+  const field = config.commercialField;
+  if (!field || !value) return null;
+  try {
+    if (commercialMeta === undefined) {
+      const fg = await odoo.executeKw('sale.order', 'fields_get', [[field]], {
+        attributes: ['type', 'selection'],
+      });
+      commercialMeta = fg[field] || null;
+    }
+    if (!commercialMeta) return null;
+    if (commercialMeta.type === 'selection') {
+      const v = String(value).trim().toLowerCase();
+      const hit = (commercialMeta.selection || []).find(
+        ([k, l]) => String(k).toLowerCase() === v || String(l).toLowerCase() === v
+      );
+      return hit ? hit[0] : null; // valeur non prévue dans la liste → on n'écrit rien
+    }
+    return value; // champ texte libre
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Combine une remise de ligne et une remise globale en un seul pourcentage.
  * effectif = 1 - (1 - ligne%)(1 - globale%)
@@ -284,6 +310,7 @@ export async function createOrder(order) {
     deliveryDate = '',
     globalDiscount = 0,
     salesperson = '',
+    commercial = '',
   } = order;
 
   if (!clientId) throw new Error('Client manquant');
@@ -338,6 +365,12 @@ export async function createOrder(order) {
   const values = { partner_id: clientId, order_line: orderLines };
   if (comment) values.note = comment;
   if (deliveryDate) values.commitment_date = deliveryDate; // date de livraison
+
+  // Champ « Commercial » : nom de l'utilisateur qui envoie la commande.
+  if (commercial && config.commercialField) {
+    const val = await resolveCommercial(commercial);
+    if (val != null) values[config.commercialField] = val;
+  }
 
   const orderId = await odoo.executeKw('sale.order', 'create', [values]);
   const [created] = await odoo.executeKw('sale.order', 'read', [[orderId]], {

@@ -1,4 +1,4 @@
-import type { Client, Product, OrderSummary, OrderDetail, CreatedOrder } from './types';
+import type { Client, Product, OrderSummary, OrderDetail, CreatedOrder, AppUser } from './types';
 
 const TOKEN_KEY = 'sheleg.token';
 
@@ -44,10 +44,36 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   async login(username: string, password: string) {
-    return request<{ token: string; user: { name: string } }>('/api/auth/login', {
+    return request<{ token: string; user: AppUser }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
+  },
+
+  me() {
+    return request<{ name: string; role: 'admin' | 'commercial'; commercial: string }>(
+      '/api/auth/me'
+    );
+  },
+
+  // --- Administration des utilisateurs ---
+  getUsers() {
+    return request<AppUser[]>('/api/users');
+  },
+  createUser(payload: {
+    name: string;
+    username: string;
+    password: string;
+    role: 'admin' | 'commercial';
+    odooCommercial?: string;
+  }) {
+    return request<AppUser>('/api/users', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  updateUser(id: string, changes: Partial<{ name: string; password: string; role: 'admin' | 'commercial'; odooCommercial: string; active: boolean }>) {
+    return request<AppUser>(`/api/users/${id}`, { method: 'PATCH', body: JSON.stringify(changes) });
+  },
+  deleteUser(id: string) {
+    return request<{ ok: boolean }>(`/api/users/${id}`, { method: 'DELETE' });
   },
 
   getClients(search = '') {

@@ -3,6 +3,7 @@ dist/
 build/
 .env
 .env.local
+server/data/
 *.log
 npm-debug.log*
 .DS_Store

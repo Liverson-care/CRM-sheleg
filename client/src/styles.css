@@ -421,6 +421,77 @@ button.list-row:active {
   flex: 1;
 }
 
+/* ---------------- Administration ---------------- */
+
+.boot-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+
+.role-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.role-admin {
+  background: #e3f0fb;
+  color: var(--sheleg-700);
+}
+
+.role-commercial {
+  background: #eef1f5;
+  color: var(--ink-soft);
+}
+
+.role-off {
+  background: #fbe4e1;
+  color: var(--danger);
+}
+
+.row-inactive {
+  opacity: 0.6;
+}
+
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.field select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.check-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+
+.check-line input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--sheleg-700);
+}
+
 /* ---------------- Accueil / tableau de bord ---------------- */
 
 .home-hero {

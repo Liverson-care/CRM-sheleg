@@ -12,9 +12,14 @@ import DevisEditor from './pages/DevisEditor';
 import Confirmation from './pages/Confirmation';
 import Orders from './pages/Orders';
 import OrderDetailPage from './pages/OrderDetail';
+import Admin from './pages/Admin';
 
 export default function App() {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
+
+  if (!ready) {
+    return <div className="boot-screen">Chargement…</div>;
+  }
 
   if (!user) {
     return (
@@ -30,6 +35,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Navigate to="/accueil" replace />} />
         <Route path="/accueil" element={<Home />} />
+        {user.role === 'admin' && <Route path="/admin" element={<Admin />} />}
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/catalogue" element={<Catalog />} />

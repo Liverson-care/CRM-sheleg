@@ -4,7 +4,7 @@ import { useOrder } from '../order';
 import Logo from './Logo';
 
 export default function Layout() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { devisList } = useOrder();
   const navigate = useNavigate();
 
@@ -50,6 +50,12 @@ export default function Layout() {
           </span>
           <span>Commandes</span>
         </NavLink>
+        {user?.role === 'admin' && (
+          <NavLink to="/admin" className="tab">
+            <TabIcon name="admin" />
+            <span>Admin</span>
+          </NavLink>
+        )}
       </nav>
     </div>
   );
@@ -103,6 +109,13 @@ function TabIcon({ name }: { name: string }) {
         <svg {...common}>
           <path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
           <path d="M14 3v6h6M9 13h6M9 17h6" />
+        </svg>
+      );
+    case 'admin':
+      return (
+        <svg {...common}>
+          <path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.6C8 19.3 5 15.4 5 11V6l7-3z" />
+          <path d="M9.5 12l1.8 1.8L15 10" />
         </svg>
       );
     default:

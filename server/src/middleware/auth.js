@@ -15,3 +15,13 @@ export function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Session expirée ou invalide' });
   }
 }
+
+/** Middleware exigeant un utilisateur avec le rôle admin. */
+export function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Accès réservé à l’administrateur' });
+    }
+    next();
+  });
+}

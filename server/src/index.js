@@ -7,7 +7,14 @@ import fs from 'node:fs';
 
 import config from './config.js';
 import odoo from './odoo.js';
-import { requireAuth } from './middleware/auth.js';
+import { requireAuth, requireAdmin } from './middleware/auth.js';
+import {
+  verifyLogin,
+  listUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+} from './users.js';
 import {
   getClients,
   getClientById,
@@ -44,21 +51,52 @@ app.get('/api/health', async (req, res) => {
 
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body || {};
-
-  // En mode démo, on valide contre DEMO_USER/DEMO_PASSWORD.
-  // En mode Odoo, on peut réutiliser les mêmes identifiants applicatifs
-  // (l'accès Odoo lui-même passe par la clé API côté serveur).
-  const okUser = (username || '').trim().toLowerCase() === config.demo.user.toLowerCase();
-  const okPass = (password || '') === config.demo.password;
-
-  if (!okUser || !okPass) {
+  const user = verifyLogin(username, password);
+  if (!user) {
     return res.status(401).json({ error: 'Identifiant ou mot de passe incorrect' });
   }
+  const token = jwt.sign(
+    { sub: user.id, name: user.name, role: user.role, commercial: user.odooCommercial || '' },
+    config.jwtSecret,
+    { expiresIn: '12h' }
+  );
+  res.json({ token, user });
+});
 
-  const token = jwt.sign({ sub: username, name: username }, config.jwtSecret, {
-    expiresIn: '12h',
-  });
-  res.json({ token, user: { name: username } });
+// Utilisateur courant (rafraîchi depuis le jeton).
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ name: req.user.name, role: req.user.role, commercial: req.user.commercial || '' });
+});
+
+// --- Administration des utilisateurs (réservé admin) -----------------------
+
+app.get('/api/users', requireAdmin, (req, res) => {
+  res.json(listUsers());
+});
+
+app.post('/api/users', requireAdmin, (req, res) => {
+  try {
+    res.status(201).json(createUser(req.body || {}));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.patch('/api/users/:id', requireAdmin, (req, res) => {
+  try {
+    res.json(updateUser(req.params.id, req.body || {}));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/users/:id', requireAdmin, (req, res) => {
+  try {
+    deleteUser(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // --- Ressources métier -----------------------------------------------------
@@ -125,6 +163,7 @@ app.post('/api/orders', requireAuth, async (req, res) => {
     const result = await createOrder({
       ...req.body,
       salesperson: req.user?.name || '',
+      commercial: req.user?.commercial || '',
     });
     res.status(201).json(result);
   } catch (err) {

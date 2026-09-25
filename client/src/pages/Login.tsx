@@ -69,7 +69,7 @@ export default function Login() {
         </form>
 
         <p className="login-hint">
-          Application commerciale · connexion sécurisée à Odoo
+          Application commerciale Sheleg · accès réservé
         </p>
       </div>
     </div>

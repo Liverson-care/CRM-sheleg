@@ -17,6 +17,8 @@ const config = {
   },
   // Taux de TVA par défaut (%) appliqué aux produits Odoo sans taux explicite.
   defaultVat: Number(process.env.DEFAULT_VAT_RATE || 5.5),
+  // Champ Odoo (sale.order) recevant le nom du commercial qui envoie la commande.
+  commercialField: process.env.ODOO_COMMERCIAL_FIELD || 'x_studio_commercial',
 };
 
 /**

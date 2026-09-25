@@ -93,3 +93,12 @@ export interface CreatedOrder {
   reference: string;
   status: OrderStatus;
 }
+
+export interface AppUser {
+  id: string;
+  name: string;
+  username: string;
+  role: 'admin' | 'commercial';
+  odooCommercial?: string;
+  active?: boolean;
+}

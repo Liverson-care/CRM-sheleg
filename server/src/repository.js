@@ -95,10 +95,13 @@ export async function getClients({ search = '' } = {}) {
       .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   }
 
-  const domain = [['customer_rank', '>', 0]];
-  if (search.trim()) {
-    domain.push('|', ['name', 'ilike', search], ['email', 'ilike', search]);
-  }
+  // Un contact est proposé comme client s'il est déjà client (customer_rank)
+  // ou si c'est une société (utile tant que les clients ne sont pas encore
+  // marqués comme tels dans Odoo). Filtrage complémentaire par recherche.
+  const customerClause = ['|', ['customer_rank', '>', 0], ['is_company', '=', true]];
+  const domain = search.trim()
+    ? ['&', ...customerClause, '|', ['name', 'ilike', search], ['email', 'ilike', search]]
+    : customerClause;
   const partners = await odoo.executeKw('res.partner', 'search_read', [domain], {
     fields: PARTNER_FIELDS,
     limit: 500,
@@ -112,7 +115,6 @@ const PARTNER_FIELDS = [
   'name',
   'email',
   'phone',
-  'mobile',
   'city',
   'street',
   'zip',

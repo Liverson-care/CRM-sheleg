@@ -183,7 +183,31 @@ export async function getProducts({ search = '' } = {}) {
     limit: 1000,
     order: 'name asc',
   });
+  await attachPackSizes(products);
   return products.map(normalizeProduct);
+}
+
+/**
+ * Renseigne product.packSize à partir des Conditionnements Odoo
+ * (product.packaging). Best-effort : si la fonctionnalité n'est pas activée
+ * (modèle/champ absents), le colisage reste à 1 sans erreur.
+ */
+async function attachPackSizes(products) {
+  const ids = products.map((p) => p.id);
+  if (!ids.length) return;
+  try {
+    const packs = await odoo.executeKw('product.packaging', 'search_read', [
+      [['product_id', 'in', ids]],
+    ], { fields: ['product_id', 'qty'] });
+    const map = new Map();
+    for (const k of packs) {
+      const pid = Array.isArray(k.product_id) ? k.product_id[0] : k.product_id;
+      if (k.qty > 0 && !map.has(pid)) map.set(pid, k.qty); // 1er conditionnement
+    }
+    for (const p of products) if (map.has(p.id)) p.packSize = map.get(p.id);
+  } catch {
+    /* Conditionnements non activés : packSize reste 1. */
+  }
 }
 
 // Vignette (image_128) pour la liste ; image_512 + description pour la fiche.
@@ -228,7 +252,9 @@ export async function getProductById(id) {
       fields: PRODUCT_LIST_FIELDS,
     });
   }
-  return rows.length ? normalizeProduct(rows[0]) : null;
+  if (!rows.length) return null;
+  await attachPackSizes(rows);
+  return normalizeProduct(rows[0]);
 }
 
 // ---------- Commandes ----------

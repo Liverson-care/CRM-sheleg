@@ -1,0 +1,35 @@
+# Stack de production Sheleg CRM pour VPS.
+#   - app   : le serveur Node (front + API Odoo), construit depuis le Dockerfile
+#   - caddy : reverse-proxy HTTPS automatique (Let's Encrypt)
+#
+# Prérequis : Docker + Docker Compose, un nom de domaine pointant (A/AAAA)
+# vers l'IP du VPS, et un fichier .env (voir .env.deploy.example).
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "3001"
+    volumes:
+      - sheleg_data:/app/server/data   # utilisateurs persistants
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  sheleg_data:
+  caddy_data:
+  caddy_config:

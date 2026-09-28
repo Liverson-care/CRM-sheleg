@@ -33,26 +33,41 @@ frontend (React buildé) et l'API qui parle à Odoo. Il suffit donc de déployer
    (ex. `https://sheleg-crm.onrender.com`).
 5. Ouvrir l'URL sur la tablette, se connecter (`admin / Sheleg2655`).
 
-## Option B — N'importe quel hébergeur Docker (VPS, Railway, Fly.io…)
+## Option B — VPS avec Docker Compose + HTTPS (recommandé sur serveur)
+
+Prérequis : un VPS (Ubuntu/Debian), **Docker + Docker Compose**, et un **nom
+de domaine** (ex. `commandes.sheleg.fr`) dont l'enregistrement DNS **A** pointe
+vers l'IP du VPS.
 
 ```bash
-# Construire l'image
-docker build -t sheleg-crm .
+# 1. Installer Docker (si besoin)
+curl -fsSL https://get.docker.com | sh
 
-# Lancer (avec vos variables et un volume pour les utilisateurs)
-docker run -d --name sheleg-crm -p 80:3001 \
-  -e ODOO_URL=https://sheleg.odoo.com \
-  -e ODOO_DB=sheleg \
-  -e ODOO_USERNAME=ymelloul@maayane.fr \
-  -e ODOO_API_KEY=xxxxx \
-  -e JWT_SECRET="$(openssl rand -hex 32)" \
-  -e DEFAULT_VAT_RATE=5.5 \
-  -v sheleg_data:/app/server/data \
-  sheleg-crm
+# 2. Récupérer le code (branche de travail)
+git clone -b claude/sheleg-odoo-orders-app-39wilc \
+  https://github.com/Liverson-care/CRM-sheleg.git
+cd CRM-sheleg
+
+# 3. Créer le fichier .env à partir du modèle et le remplir
+cp .env.deploy.example .env
+nano .env          # renseigner DOMAIN, ODOO_API_KEY, JWT_SECRET…
+#   Générer un secret : openssl rand -hex 32
+
+# 4. Démarrer (build + lancement + HTTPS automatique)
+docker compose up -d --build
 ```
 
-Mettre un reverse-proxy HTTPS devant (Caddy, Nginx, Traefik) : **HTTPS est
-indispensable** sur tablette (envoi e-mail, partage PDF, futur mode hors-ligne).
+Caddy obtient automatiquement un certificat HTTPS pour votre domaine.
+L'app est alors accessible sur `https://votre-domaine`.
+
+Mise à jour ultérieure :
+```bash
+git pull
+docker compose up -d --build
+```
+
+**HTTPS est indispensable** sur tablette (envoi e-mail, partage PDF, futur
+mode hors-ligne) — la stack Caddy s'en charge.
 
 ## Option C — Sans Docker (VPS avec Node 18+)
 

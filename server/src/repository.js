@@ -37,7 +37,37 @@ function productImage(product) {
   return product.image || '';
 }
 
+/**
+ * Nombre de pièces par colis (conditionnement).
+ * L'unité de mesure de vente porte le conditionnement dans son nom
+ * ("Colis de 12" → 12) : c'est la source fiable qui pilote aussi le tarif.
+ *   1. product.packSize — déjà fourni (données de démo)
+ *   2. le nombre présent dans le nom de l'UdM ("Colis de 12" → 12)
+ * À défaut (ex. vente au kg) : 1.
+ */
+function resolvePackSize(product) {
+  if (Number.isFinite(product.packSize) && product.packSize > 0) {
+    return product.packSize;
+  }
+  const uomName = Array.isArray(product.uom_id)
+    ? product.uom_id[1]
+    : product.uom || '';
+  const m = String(uomName).match(/(\d+)/);
+  if (m && Number(m[1]) > 0) return Number(m[1]);
+  return 1;
+}
+
+/**
+ * Prix à la pièce. list_price est le prix de l'unité de vente (le colis,
+ * ou le kg) : on le répartit sur le nombre de pièces. Toujours défini.
+ */
+function resolveUnitPrice(product, packSize) {
+  const lp = product.list_price ?? 0;
+  return packSize > 0 ? lp / packSize : lp;
+}
+
 function normalizeProduct(product) {
+  const packSize = resolvePackSize(product);
   return {
     id: product.id,
     name: product.name || '',
@@ -53,9 +83,9 @@ function normalizeProduct(product) {
     description: product.description_sale || product.description || '',
     // Taux de TVA (%) : explicite en démo, sinon taux par défaut (Odoo recalcule).
     vat: product.vat ?? config.defaultVat,
-    // Conditionnement : list_price est le prix du COLIS, unitPrice le prix/pièce.
-    packSize: product.packSize ?? 1,
-    unitPrice: (product.list_price ?? 0) / (product.packSize ?? 1),
+    // Conditionnement : nb de pièces par colis, et prix à la pièce (toujours affiché).
+    packSize,
+    unitPrice: resolveUnitPrice(product, packSize),
   };
 }
 
@@ -183,34 +213,27 @@ export async function getProducts({ search = '' } = {}) {
     limit: 1000,
     order: 'name asc',
   });
-  await attachPackSizes(products);
   return products.map(normalizeProduct);
 }
 
-/**
- * Renseigne product.packSize à partir des Conditionnements Odoo
- * (product.packaging). Best-effort : si la fonctionnalité n'est pas activée
- * (modèle/champ absents), le colisage reste à 1 sans erreur.
- */
-async function attachPackSizes(products) {
-  const ids = products.map((p) => p.id);
-  if (!ids.length) return;
+/** Map productId → nombre de pièces par colis, pour une liste d'identifiants. */
+async function packSizesFor(productIds = []) {
+  const ids = [...new Set(productIds.filter(Boolean))];
+  const map = new Map();
+  if (!ids.length) return map;
   try {
-    const packs = await odoo.executeKw('product.packaging', 'search_read', [
-      [['product_id', 'in', ids]],
-    ], { fields: ['product_id', 'qty'] });
-    const map = new Map();
-    for (const k of packs) {
-      const pid = Array.isArray(k.product_id) ? k.product_id[0] : k.product_id;
-      if (k.qty > 0 && !map.has(pid)) map.set(pid, k.qty); // 1er conditionnement
-    }
-    for (const p of products) if (map.has(p.id)) p.packSize = map.get(p.id);
+    const rows = await odoo.executeKw('product.product', 'read', [ids], {
+      fields: ['id', 'uom_id'],
+    });
+    for (const r of rows) map.set(r.id, resolvePackSize(r));
   } catch {
-    /* Conditionnements non activés : packSize reste 1. */
+    /* Lecture impossible : colisage 1 par défaut. */
   }
+  return map;
 }
 
 // Vignette (image_128) pour la liste ; image_512 + description pour la fiche.
+// uom_id renvoie [id, "Colis de 12"] : le colisage est déduit de ce nom.
 const PRODUCT_LIST_FIELDS = [
   'id',
   'name',
@@ -253,7 +276,6 @@ export async function getProductById(id) {
     });
   }
   if (!rows.length) return null;
-  await attachPackSizes(rows);
   return normalizeProduct(rows[0]);
 }
 
@@ -481,6 +503,12 @@ export async function getOrderById(id) {
       })
     : [];
 
+  // Colisage par produit : le prix de la ligne (price_unit) est celui du COLIS,
+  // on en déduit le prix à la pièce pour l'affichage.
+  const packByProduct = await packSizesFor(
+    lineRows.map((l) => (Array.isArray(l.product_id) ? l.product_id[0] : null)).filter(Boolean)
+  );
+
   return {
     id: Number(id),
     reference: head.name,
@@ -490,16 +518,20 @@ export async function getOrderById(id) {
     deliveryDate: head.commitment_date || '',
     comment: head.note || '',
     date: head.date_order,
-    lines: lineRows.map((l) => ({
-      name: l.name,
-      productId: Array.isArray(l.product_id) ? l.product_id[0] : undefined,
-      qty: l.product_uom_qty,
-      price: l.price_unit,
-      packSize: 1,
-      unitPrice: l.price_unit,
-      discount: l.discount || 0,
-      totalHT: l.price_subtotal ?? 0,
-    })),
+    lines: lineRows.map((l) => {
+      const productId = Array.isArray(l.product_id) ? l.product_id[0] : undefined;
+      const pack = packByProduct.get(productId) || 1;
+      return {
+        name: l.name,
+        productId,
+        qty: l.product_uom_qty,
+        price: l.price_unit,
+        packSize: pack,
+        unitPrice: pack > 0 ? l.price_unit / pack : l.price_unit,
+        discount: l.discount || 0,
+        totalHT: l.price_subtotal ?? 0,
+      };
+    }),
     totalHT: head.amount_untaxed ?? 0,
     totalTVA: head.amount_tax ?? 0,
     totalTTC: head.amount_total ?? 0,

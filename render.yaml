@@ -1,0 +1,30 @@
+# Blueprint de déploiement Render (https://render.com)
+# Crée un service web Docker + un disque persistant pour les utilisateurs.
+# Les identifiants Odoo sont saisis dans le tableau de bord Render (sync: false).
+services:
+  - type: web
+    name: sheleg-crm
+    runtime: docker
+    plan: starter        # « free » possible pour tester (se met en veille)
+    region: frankfurt
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: data
+      mountPath: /app/server/data
+      sizeGB: 1
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true          # secret généré automatiquement
+      - key: DEFAULT_VAT_RATE
+        value: "5.5"
+      - key: ODOO_COMMERCIAL_FIELD
+        value: x_studio_commercial
+      - key: ODOO_URL
+        sync: false                  # à renseigner dans Render
+      - key: ODOO_DB
+        sync: false
+      - key: ODOO_USERNAME
+        sync: false
+      - key: ODOO_API_KEY
+        sync: false

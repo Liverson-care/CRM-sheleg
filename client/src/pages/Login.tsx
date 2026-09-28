@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
-import Logo from '../components/Logo';
 
 export default function Login() {
   const { login } = useAuth();
@@ -29,11 +28,13 @@ export default function Login() {
     <div className="login-screen">
       <div className="login-card">
         <div className="login-brand">
-          <Logo size={52} />
-          <div>
-            <h1>Sheleg</h1>
-            <p>Prise de commande</p>
-          </div>
+          <img
+            className="login-logo"
+            src="/sheleg-logo.png"
+            alt="Sheleg"
+            width={220}
+          />
+          <p>Prise de commande</p>
         </div>
 
         <form onSubmit={handleSubmit}>

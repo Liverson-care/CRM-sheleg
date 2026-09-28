@@ -64,6 +64,8 @@ export interface OrderSummary {
 export interface OrderDetailLine {
   name: string;
   productId?: number;
+  default_code?: string;
+  barcode?: string;
   qty: number;
   price: number;
   packSize?: number;

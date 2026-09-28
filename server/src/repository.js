@@ -216,18 +216,27 @@ export async function getProducts({ search = '' } = {}) {
   return products.map(normalizeProduct);
 }
 
-/** Map productId → nombre de pièces par colis, pour une liste d'identifiants. */
-async function packSizesFor(productIds = []) {
+/**
+ * Map productId → { packSize, code, barcode } pour une liste d'identifiants.
+ * Sert à enrichir les lignes de commande (code article, gencode, colisage).
+ */
+async function productInfoFor(productIds = []) {
   const ids = [...new Set(productIds.filter(Boolean))];
   const map = new Map();
   if (!ids.length) return map;
   try {
     const rows = await odoo.executeKw('product.product', 'read', [ids], {
-      fields: ['id', 'uom_id'],
+      fields: ['id', 'uom_id', 'default_code', 'barcode'],
     });
-    for (const r of rows) map.set(r.id, resolvePackSize(r));
+    for (const r of rows) {
+      map.set(r.id, {
+        packSize: resolvePackSize(r),
+        code: r.default_code || '',
+        barcode: r.barcode || '',
+      });
+    }
   } catch {
-    /* Lecture impossible : colisage 1 par défaut. */
+    /* Lecture impossible : valeurs par défaut. */
   }
   return map;
 }
@@ -458,10 +467,13 @@ export async function getOrderById(id) {
       globalDiscount: o.globalDiscount || 0,
       date: o.date,
       lines: o.lines.map((l) => {
-        const pack = demoProducts.find((p) => p.id === l.productId)?.packSize ?? 1;
+        const prod = demoProducts.find((p) => p.id === l.productId);
+        const pack = prod?.packSize ?? 1;
         return {
           name: l.name,
           productId: l.productId,
+          default_code: prod?.default_code || '',
+          barcode: prod?.barcode || '',
           qty: l.qty,
           price: l.price,
           packSize: pack,
@@ -503,9 +515,9 @@ export async function getOrderById(id) {
       })
     : [];
 
-  // Colisage par produit : le prix de la ligne (price_unit) est celui du COLIS,
-  // on en déduit le prix à la pièce pour l'affichage.
-  const packByProduct = await packSizesFor(
+  // Infos produit par ligne : code article, gencode et colisage. Le prix de la
+  // ligne (price_unit) est celui du COLIS ; on en déduit le prix à la pièce.
+  const infoByProduct = await productInfoFor(
     lineRows.map((l) => (Array.isArray(l.product_id) ? l.product_id[0] : null)).filter(Boolean)
   );
 
@@ -520,10 +532,13 @@ export async function getOrderById(id) {
     date: head.date_order,
     lines: lineRows.map((l) => {
       const productId = Array.isArray(l.product_id) ? l.product_id[0] : undefined;
-      const pack = packByProduct.get(productId) || 1;
+      const info = infoByProduct.get(productId) || {};
+      const pack = info.packSize || 1;
       return {
         name: l.name,
         productId,
+        default_code: info.code || '',
+        barcode: info.barcode || '',
         qty: l.product_uom_qty,
         price: l.price_unit,
         packSize: pack,

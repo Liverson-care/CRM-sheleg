@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useOrder } from '../order';
-import { formatEuro, formatDate, orderStatusLabel } from '../util';
+import { formatEuro, formatDate, formatDateShort, orderStatusLabel } from '../util';
 import type { OrderDetail, Client } from '../types';
 
 export default function OrderDetailPage() {
@@ -44,18 +44,18 @@ export default function OrderDetailPage() {
     if (!order) return;
     setSharing(true);
     try {
-      // Pré-remplit l'e-mail du client pour le repli mailto.
-      let clientEmails: string[] = [];
+      // Récupère la fiche client : ses infos sur le devis + e-mail pour le mailto.
+      let client: Client | null = null;
       if (order.clientId) {
         try {
-          const c = await api.getClient(order.clientId);
-          clientEmails = c.email ? [c.email] : [];
+          client = await api.getClient(order.clientId);
         } catch {
-          clientEmails = [];
+          client = null;
         }
       }
+      const clientEmails = client?.email ? [client.email] : [];
       const { shareOrderPDF } = await import('../export');
-      await shareOrderPDF(order, clientEmails);
+      await shareOrderPDF(order, clientEmails, client);
     } finally {
       setSharing(false);
     }
@@ -86,7 +86,7 @@ export default function OrderDetailPage() {
       <div className="detail-card">
         <InfoRow label="Client" value={order.client} />
         <InfoRow label="Date" value={formatDate(order.date)} />
-        {order.deliveryDate && <InfoRow label="Livraison" value={order.deliveryDate} />}
+        {order.deliveryDate && <InfoRow label="Livraison" value={formatDateShort(order.deliveryDate)} />}
         {order.comment && <InfoRow label="Commentaire" value={order.comment} />}
       </div>
 

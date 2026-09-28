@@ -18,6 +18,20 @@ export function formatDate(iso: string): string {
   }).format(d);
 }
 
+/** Date seule (JJ/MM/AAAA), sans l'heure. Gère "AAAA-MM-JJ" et "AAAA-MM-JJ HH:MM:SS". */
+export function formatDateShort(value: string): string {
+  if (!value) return '';
+  const m = value.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d);
+}
+
 import type { Product } from './types';
 
 /** Nombre de pièces par colis (défaut 1). */

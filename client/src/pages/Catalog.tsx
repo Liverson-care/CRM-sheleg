@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { formatEuro, stockLevel, unitPrice, packSize } from '../util';
+import { formatEuro, stockLevel, unitPrice, packSize, byCode } from '../util';
 import ProductImage from '../components/ProductImage';
 import ClientPickerModal from '../components/ClientPickerModal';
 import type { Product, Client } from '../types';
@@ -54,7 +54,10 @@ export default function Catalog() {
   }, [products]);
 
   const filtered = useMemo(
-    () => (category === 'Tous' ? products : products.filter((p) => p.category === category)),
+    () =>
+      (category === 'Tous' ? products : products.filter((p) => p.category === category))
+        .slice()
+        .sort(byCode),
     [products, category]
   );
 
@@ -133,8 +136,8 @@ export default function Catalog() {
               >
                 <ProductImage product={p} size="card" />
                 <div className="product-cat">{p.category}</div>
+                {p.default_code && <span className="code code-strong">{p.default_code}</span>}
                 <div className="product-name">{p.name}</div>
-                {p.default_code && <span className="code">{p.default_code}</span>}
                 <div className="product-foot-row">
                   <div className="price">{formatEuro(unitPrice(p))}<span className="price-unit"> /pièce</span></div>
                   <span className={`stock-dot stock-${st.cls}`} title={st.label} />
@@ -158,11 +161,9 @@ export default function Catalog() {
               >
                 <ProductImage product={p} size="thumb" />
                 <div className="product-row-main">
+                  {p.default_code && <span className="code code-strong">{p.default_code}</span>}
                   <div className="product-name">{p.name}</div>
-                  <div className="list-sub">
-                    {p.category}
-                    {p.default_code ? ` · ${p.default_code}` : ''}
-                  </div>
+                  <div className="list-sub">{p.category}</div>
                   <span className={`stock-pill stock-${st.cls}`}>{st.label}</span>
                 </div>
                 <div className="product-row-right">
@@ -198,10 +199,9 @@ export default function Catalog() {
                 <div key={p.id} className="preview-row">
                   <ProductImage product={p} size="thumb" />
                   <div className="preview-row-main">
+                    {p.default_code && <span className="code code-strong">{p.default_code}</span>}
                     <div className="product-name">{p.name}</div>
-                    <div className="list-sub">
-                      {p.default_code} · {packSize(p)} pcs/colis
-                    </div>
+                    <div className="list-sub">{packSize(p)} pcs/colis</div>
                   </div>
                   {withPrices && (
                     <div className="preview-price">{formatEuro(unitPrice(p))}<span> /pièce</span></div>

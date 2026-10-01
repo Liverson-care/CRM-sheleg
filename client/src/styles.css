@@ -1252,6 +1252,15 @@ a.btn-disabled {
   color: var(--ink-soft);
 }
 
+/* Code article mis en avant (avant le nom du produit). */
+.code-strong {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--sheleg-700);
+  letter-spacing: 0.3px;
+  margin-bottom: 1px;
+}
+
 .price {
   font-size: 18px;
   font-weight: 700;

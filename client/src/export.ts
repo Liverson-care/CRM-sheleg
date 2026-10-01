@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Product, OrderDetail, Client } from './types';
-import { formatEuro, formatDateShort, unitPrice, packSize } from './util';
+import { formatEuro, formatDateShort, unitPrice, packSize, byCode } from './util';
 
 /** Montant en euros, format français : virgule décimale, espace milliers, « € ». */
 function euroPdf(n: number): string {
@@ -71,6 +71,36 @@ async function loadLogoDataUrl(): Promise<LogoData> {
   return logoCache;
 }
 
+/** Réduit une image (data URL) pour alléger le PDF. Renvoie null si illisible. */
+async function scaleImage(
+  dataUrl: string,
+  maxPx: number
+): Promise<{ dataUrl: string; w: number; h: number } | null> {
+  if (!dataUrl) return null;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * scale));
+      const h = Math.max(1, Math.round(img.naturalHeight * scale));
+      try {
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext('2d')!;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve({ dataUrl: c.toDataURL('image/jpeg', 0.8), w, h });
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
 interface ExportOptions {
   withPrices: boolean;
 }
@@ -85,10 +115,10 @@ function catalogueFileName(withPrices: boolean, ext: string) {
 export function exportExcel(products: Product[], { withPrices }: ExportOptions) {
   const rows = products.map((p) => {
     const row: Record<string, string | number> = {
-      Catégorie: p.category,
       Code: p.default_code,
       Produit: p.name,
       'Code-barres': p.barcode,
+      Famille: p.category,
       'Pièces/colis': packSize(p),
     };
     if (withPrices) row['Prix unité (€)'] = Number(unitPrice(p).toFixed(2));
@@ -101,42 +131,129 @@ export function exportExcel(products: Product[], { withPrices }: ExportOptions) 
   XLSX.writeFile(wb, catalogueFileName(withPrices, 'xlsx'));
 }
 
-/** Construit le PDF du catalogue et renvoie le document jsPDF. */
-export function buildCataloguePDF(products: Product[], { withPrices }: ExportOptions): jsPDF {
+/** Construit le PDF du catalogue (logo, familles en séparateur, photos, gencode). */
+export async function buildCataloguePDF(
+  products: Product[],
+  { withPrices }: ExportOptions
+): Promise<jsPDF> {
   const doc = new jsPDF();
+  const left = 14;
+  const right = doc.internal.pageSize.getWidth() - 14;
 
-  doc.setFontSize(18);
+  // En-tête : logo Sheleg à gauche, titre + date à droite.
+  let headerBottom = 20;
+  try {
+    const logo = await loadLogoDataUrl();
+    const w = 42;
+    const h = (logo.h / logo.w) * w;
+    doc.addImage(logo.dataUrl, 'PNG', left, 10, w, h);
+    headerBottom = 10 + h;
+  } catch {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(7, 58, 107);
+    doc.text('SHELEG', left, 20);
+    headerBottom = 22;
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
   doc.setTextColor(7, 58, 107);
-  doc.text('Catalogue Sheleg', 14, 18);
+  doc.text('Catalogue', right, 16, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(120);
-  doc.text(`Édité le ${DATE()} · ${products.length} produits`, 14, 25);
+  doc.text(`Édité le ${DATE()} · ${products.length} produits`, right, 22, { align: 'right' });
+
+  // Tri par famille (catégorie) puis par code article.
+  const sorted = products.slice().sort((a, b) => {
+    const c = (a.category || 'Divers').localeCompare(b.category || 'Divers', 'fr');
+    return c !== 0 ? c : byCode(a, b);
+  });
+
+  // Pré-charge les vignettes réduites par produit.
+  const imgMap = new Map<number, { dataUrl: string; w: number; h: number }>();
+  await Promise.all(
+    sorted.map(async (p) => {
+      if (p.image) {
+        const im = await scaleImage(p.image, 120);
+        if (im) imgMap.set(p.id, im);
+      }
+    })
+  );
+
+  // Corps : une ligne « famille » en séparateur, puis ses produits.
+  const colCount = withPrices ? 6 : 5;
+  const body: unknown[] = [];
+  const rowProducts: (Product | null)[] = [];
+  let currentCat: string | null = null;
+  for (const p of sorted) {
+    const cat = p.category || 'Divers';
+    if (cat !== currentCat) {
+      currentCat = cat;
+      body.push([
+        {
+          content: pdfSafe(cat),
+          colSpan: colCount,
+          styles: { fillColor: [7, 58, 107], textColor: 255, fontStyle: 'bold', fontSize: 10 },
+        },
+      ]);
+      rowProducts.push(null);
+    }
+    const row: string[] = ['', p.default_code || '', pdfSafe(p.name), p.barcode || '', String(packSize(p))];
+    if (withPrices) row.push(euroPdf(unitPrice(p)));
+    body.push(row);
+    rowProducts.push(p);
+  }
 
   const head = withPrices
-    ? [['Catégorie', 'Code', 'Produit', 'Pcs/colis', 'Prix / pièce']]
-    : [['Catégorie', 'Code', 'Produit', 'Pcs/colis']];
-
-  const body = products.map((p) => {
-    const base = [p.category, p.default_code, p.name, String(packSize(p))];
-    return withPrices ? [...base, formatEuro(unitPrice(p))] : base;
-  });
+    ? [['Photo', 'Code', 'Produit', 'Code-barres', 'Pcs/colis', 'Prix / pièce']]
+    : [['Photo', 'Code', 'Produit', 'Code-barres', 'Pcs/colis']];
 
   autoTable(doc, {
     head,
-    body,
-    startY: 30,
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [11, 92, 171], textColor: 255 },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    body: body as any,
+    startY: Math.max(headerBottom, 26) + 4,
+    styles: { fontSize: 8, cellPadding: 2, valign: 'middle', minCellHeight: 16 },
+    headStyles: { fillColor: [11, 92, 171], textColor: 255, halign: 'center', fontSize: 8 },
     alternateRowStyles: { fillColor: [242, 248, 253] },
-    columnStyles: { 3: { halign: 'center' }, ...(withPrices ? { 4: { halign: 'right' } } : {}) },
+    columnStyles: {
+      0: { cellWidth: 18, halign: 'center' },
+      1: { cellWidth: 22 },
+      2: { cellWidth: 'auto' },
+      3: { cellWidth: 30 },
+      4: { cellWidth: 18, halign: 'center' },
+      ...(withPrices ? { 5: { cellWidth: 24, halign: 'right' } } : {}),
+    },
+    margin: { left, right: 14 },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    didDrawCell: (data: any) => {
+      if (data.section !== 'body' || data.column.index !== 0) return;
+      const p = rowProducts[data.row.index];
+      if (!p) return;
+      const im = imgMap.get(p.id);
+      if (!im) return;
+      const maxW = data.cell.width - 3;
+      const maxH = data.cell.height - 3;
+      const scale = Math.min(maxW / im.w, maxH / im.h);
+      const w = im.w * scale;
+      const h = im.h * scale;
+      const x = data.cell.x + (data.cell.width - w) / 2;
+      const y = data.cell.y + (data.cell.height - h) / 2;
+      try {
+        doc.addImage(im.dataUrl, 'JPEG', x, y, w, h);
+      } catch {
+        /* image illisible : on laisse la cellule vide */
+      }
+    },
   });
 
   return doc;
 }
 
 /** Télécharge le catalogue en PDF. */
-export function exportPDF(products: Product[], opts: ExportOptions) {
-  buildCataloguePDF(products, opts).save(catalogueFileName(opts.withPrices, 'pdf'));
+export async function exportPDF(products: Product[], opts: ExportOptions) {
+  (await buildCataloguePDF(products, opts)).save(catalogueFileName(opts.withPrices, 'pdf'));
 }
 
 /** Envoie le catalogue au client en PDF depuis la tablette (partage / e-mail). */
@@ -145,7 +262,7 @@ export async function shareCataloguePDF(
   opts: ExportOptions,
   emails: string[]
 ) {
-  const doc = buildCataloguePDF(products, opts);
+  const doc = await buildCataloguePDF(products, opts);
   const blob = doc.output('blob') as Blob;
   const file = new File([blob], catalogueFileName(opts.withPrices, 'pdf'), {
     type: 'application/pdf',

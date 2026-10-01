@@ -45,6 +45,22 @@ export function unitPrice(p: Product): number {
 }
 
 /**
+ * Tri par code article : codes renseignés d'abord (ordre alphanumérique
+ * naturel), puis les produits sans code, départagés par le nom.
+ */
+export function byCode(a: Product, b: Product): number {
+  const ca = (a.default_code || '').trim();
+  const cb = (b.default_code || '').trim();
+  if (ca && cb) {
+    const c = ca.localeCompare(cb, 'fr', { numeric: true, sensitivity: 'base' });
+    if (c !== 0) return c;
+  } else if (ca !== cb) {
+    return ca ? -1 : 1; // un code vide passe après un code renseigné
+  }
+  return (a.name || '').localeCompare(b.name || '', 'fr');
+}
+
+/**
  * Niveau de stock pour la pastille : vert (≥100), orange (<100), rouge (0).
  */
 export function stockLevel(qty: number): { cls: string; label: string } {

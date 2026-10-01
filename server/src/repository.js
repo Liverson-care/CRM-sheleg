@@ -211,7 +211,7 @@ export async function getProducts({ search = '' } = {}) {
   const products = await odoo.executeKw('product.product', 'search_read', [domain], {
     fields: PRODUCT_LIST_FIELDS,
     limit: 1000,
-    order: 'name asc',
+    order: 'default_code asc, name asc',
   });
   return products.map(normalizeProduct);
 }

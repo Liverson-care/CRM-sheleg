@@ -213,6 +213,7 @@ export async function getProducts({ search = '' } = {}) {
     limit: 1000,
     order: 'default_code asc, name asc',
   });
+  await attachVat(products);
   return products.map(normalizeProduct);
 }
 
@@ -252,6 +253,7 @@ const PRODUCT_LIST_FIELDS = [
   'categ_id',
   'uom_id',
   'qty_available',
+  'taxes_id',
   'image_128',
 ];
 const PRODUCT_DETAIL_FIELDS = [
@@ -319,6 +321,37 @@ async function resolveVat(taxIds) {
     if (a != null) return a;
   }
   return null;
+}
+
+/**
+ * Renseigne row.vat (taux réel de la 1re taxe de vente en %) pour une liste de
+ * produits. Best-effort : lit account.tax une seule fois (cache partagé).
+ */
+async function attachVat(rows) {
+  const ids = [
+    ...new Set(rows.flatMap((r) => (Array.isArray(r.taxes_id) ? r.taxes_id : []))),
+  ];
+  const missing = ids.filter((id) => !taxCache.has(id));
+  if (missing.length) {
+    try {
+      const taxes = await odoo.executeKw('account.tax', 'read', [missing], {
+        fields: ['amount', 'amount_type'],
+      });
+      for (const t of taxes) taxCache.set(t.id, t.amount_type === 'percent' ? t.amount : null);
+    } catch {
+      for (const id of missing) taxCache.set(id, null);
+    }
+  }
+  for (const r of rows) {
+    const tids = Array.isArray(r.taxes_id) ? r.taxes_id : [];
+    for (const id of tids) {
+      const a = taxCache.get(id);
+      if (a != null) {
+        r.vat = a;
+        break;
+      }
+    }
+  }
 }
 
 /** Extrait les informations logistiques d'une fiche produit Odoo. */

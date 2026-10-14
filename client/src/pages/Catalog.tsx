@@ -8,6 +8,9 @@ import type { Product, Client } from '../types';
 
 const VIEW_KEY = 'sheleg.catalogView';
 
+// Familles exclues de l'export catalogue (produits de service, non vendus).
+const EXCLUDED_FAMILIES = /^(divers|deliver(y|ies)?)$/i;
+
 export default function Catalog() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
@@ -17,6 +20,7 @@ export default function Catalog() {
   const [error, setError] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [withPrices, setWithPrices] = useState(true);
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [emailPickOpen, setEmailPickOpen] = useState(false);
   const [view, setView] = useState<'grid' | 'list'>(() => {
     try {
@@ -61,17 +65,29 @@ export default function Catalog() {
     [products, category]
   );
 
+  // Produits retenus pour l'export : familles de service exclues (Divers,
+  // Deliveries) et, en option, uniquement les produits en stock.
+  const exportProducts = useMemo(
+    () =>
+      filtered.filter(
+        (p) =>
+          !EXCLUDED_FAMILIES.test(p.category || '') &&
+          (!inStockOnly || p.qty_available > 0)
+      ),
+    [filtered, inStockOnly]
+  );
+
   async function saveCatalogue(kind: 'pdf' | 'excel') {
     const mod = await import('../export');
-    if (kind === 'pdf') mod.exportPDF(filtered, { withPrices });
-    else mod.exportExcel(filtered, { withPrices });
+    if (kind === 'pdf') await mod.exportPDF(exportProducts, { withPrices });
+    else mod.exportExcel(exportProducts, { withPrices });
   }
 
   async function sendCatalogue(client: Client) {
     setEmailPickOpen(false);
     setPreviewOpen(false);
     const mod = await import('../export');
-    await mod.shareCataloguePDF(filtered, { withPrices }, client.email ? [client.email] : []);
+    await mod.shareCataloguePDF(exportProducts, { withPrices }, client.email ? [client.email] : []);
   }
 
   return (
@@ -183,31 +199,45 @@ export default function Catalog() {
         <div className="modal-overlay" onClick={() => setPreviewOpen(false)}>
           <div className="modal modal-preview" onClick={(e) => e.stopPropagation()}>
             <div className="preview-head">
-              <h3>Aperçu du catalogue</h3>
-              <label className="toggle-prices">
-                <input
-                  type="checkbox"
-                  checked={withPrices}
-                  onChange={(e) => setWithPrices(e.target.checked)}
-                />
-                Afficher les prix
-              </label>
+              <h3>Aperçu du catalogue <span className="muted-inline">({exportProducts.length} produits)</span></h3>
+              <div className="preview-toggles">
+                <label className="toggle-prices">
+                  <input
+                    type="checkbox"
+                    checked={withPrices}
+                    onChange={(e) => setWithPrices(e.target.checked)}
+                  />
+                  Afficher les prix
+                </label>
+                <label className="toggle-prices">
+                  <input
+                    type="checkbox"
+                    checked={inStockOnly}
+                    onChange={(e) => setInStockOnly(e.target.checked)}
+                  />
+                  Uniquement en stock
+                </label>
+              </div>
             </div>
 
             <div className="preview-body">
-              {filtered.map((p) => (
+              {exportProducts.map((p) => (
                 <div key={p.id} className="preview-row">
                   <ProductImage product={p} size="thumb" />
                   <div className="preview-row-main">
                     {p.default_code && <span className="code code-strong">{p.default_code}</span>}
                     <div className="product-name">{p.name}</div>
-                    <div className="list-sub">{packSize(p)} pcs/colis</div>
+                    <div className="list-sub">
+                      {packSize(p)} pcs/colis
+                      {withPrices && p.vat != null ? ` · TVA ${String(p.vat).replace('.', ',')} %` : ''}
+                    </div>
                   </div>
                   {withPrices && (
                     <div className="preview-price">{formatEuro(unitPrice(p))}<span> /pièce</span></div>
                   )}
                 </div>
               ))}
+              {exportProducts.length === 0 && <div className="muted">Aucun produit à exporter.</div>}
             </div>
 
             <div className="preview-actions">

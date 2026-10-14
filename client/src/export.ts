@@ -121,7 +121,10 @@ export function exportExcel(products: Product[], { withPrices }: ExportOptions) 
       Famille: p.category,
       'Pièces/colis': packSize(p),
     };
-    if (withPrices) row['Prix unité (€)'] = Number(unitPrice(p).toFixed(2));
+    if (withPrices) {
+      row['Prix unité (€)'] = Number(unitPrice(p).toFixed(2));
+      if (p.vat != null) row['TVA (%)'] = p.vat;
+    }
     return row;
   });
 
@@ -182,7 +185,7 @@ export async function buildCataloguePDF(
   );
 
   // Corps : une ligne « famille » en séparateur, puis ses produits.
-  const colCount = withPrices ? 6 : 5;
+  const colCount = withPrices ? 7 : 5;
   const body: unknown[] = [];
   const rowProducts: (Product | null)[] = [];
   let currentCat: string | null = null;
@@ -200,13 +203,16 @@ export async function buildCataloguePDF(
       rowProducts.push(null);
     }
     const row: string[] = ['', p.default_code || '', pdfSafe(p.name), p.barcode || '', String(packSize(p))];
-    if (withPrices) row.push(euroPdf(unitPrice(p)));
+    if (withPrices) {
+      row.push(euroPdf(unitPrice(p)));
+      row.push(p.vat != null ? `${String(p.vat).replace('.', ',')} %` : '—');
+    }
     body.push(row);
     rowProducts.push(p);
   }
 
   const head = withPrices
-    ? [['Photo', 'Code', 'Produit', 'Code-barres', 'Pcs/colis', 'Prix / pièce']]
+    ? [['Photo', 'Code', 'Produit', 'Code-barres', 'Pcs/colis', 'Prix / pièce', 'TVA']]
     : [['Photo', 'Code', 'Produit', 'Code-barres', 'Pcs/colis']];
 
   autoTable(doc, {
@@ -219,11 +225,16 @@ export async function buildCataloguePDF(
     alternateRowStyles: { fillColor: [242, 248, 253] },
     columnStyles: {
       0: { cellWidth: 18, halign: 'center' },
-      1: { cellWidth: 22 },
+      1: { cellWidth: 20 },
       2: { cellWidth: 'auto' },
-      3: { cellWidth: 30 },
-      4: { cellWidth: 18, halign: 'center' },
-      ...(withPrices ? { 5: { cellWidth: 24, halign: 'right' } } : {}),
+      3: { cellWidth: 28 },
+      4: { cellWidth: 16, halign: 'center' },
+      ...(withPrices
+        ? {
+            5: { cellWidth: 22, halign: 'right' },
+            6: { cellWidth: 15, halign: 'center' },
+          }
+        : {}),
     },
     margin: { left, right: 14 },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

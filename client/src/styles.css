@@ -354,6 +354,13 @@ button.list-row:active {
   font-size: 18px;
 }
 
+.preview-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: flex-end;
+}
+
 .toggle-prices {
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useOrder } from '../order';
+import { useOrder, draftToOrderDetail } from '../order';
 import { formatEuro, unitPrice, packSize } from '../util';
 import ClientPickerModal from '../components/ClientPickerModal';
 
@@ -9,8 +9,26 @@ export default function DevisEditor() {
   const navigate = useNavigate();
   const [askLeave, setAskLeave] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const lines = draft?.lines ?? [];
+
+  async function sendToClient() {
+    if (!draft || draft.lines.length === 0) return;
+    if (!draft.client) {
+      // Sans client, on ouvre d'abord le sélecteur.
+      setPickOpen(true);
+      return;
+    }
+    setSending(true);
+    try {
+      const order = draftToOrderDetail(draft, totals);
+      const { shareOrderPDF } = await import('../export');
+      await shareOrderPDF(order, draft.client.email ? [draft.client.email] : [], draft.client);
+    } finally {
+      setSending(false);
+    }
+  }
 
   if (lines.length === 0) {
     return (
@@ -104,6 +122,13 @@ export default function DevisEditor() {
           onClick={() => navigate('/devis/confirmation')}
         >
           Confirmer la commande
+        </button>
+        <button
+          className="btn-ghost btn-block"
+          onClick={sendToClient}
+          disabled={sending}
+        >
+          {sending ? 'Préparation du PDF…' : 'Envoyer au client (PDF)'}
         </button>
       </div>
 

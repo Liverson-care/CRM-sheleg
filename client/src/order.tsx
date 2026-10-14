@@ -83,6 +83,45 @@ export function computeTotals(draft: Draft | null): Totals {
   };
 }
 
+/**
+ * Convertit le devis en cours (brouillon local) en OrderDetail, pour générer
+ * le PDF « Envoyer au client » avant même l'envoi dans Odoo.
+ */
+export function draftToOrderDetail(draft: Draft, totals: Totals): OrderDetail {
+  const gd = draft.globalDiscount || 0;
+  return {
+    id: draft.id,
+    reference: '',
+    client: draft.client?.name ?? '',
+    clientId: draft.client?.id ?? null,
+    status: 'devis',
+    deliveryDate: draft.deliveryDate || '',
+    comment: draft.comment || '',
+    date: new Date().toISOString(),
+    lines: draft.lines.map((l) => {
+      const frac = combined(l.discount, gd);
+      const pack = l.product.packSize && l.product.packSize > 0 ? l.product.packSize : 1;
+      const price = l.product.list_price;
+      return {
+        name: l.product.name,
+        productId: l.product.id,
+        default_code: l.product.default_code,
+        barcode: l.product.barcode,
+        qty: l.qty,
+        price,
+        packSize: pack,
+        unitPrice: l.product.unitPrice ?? price / pack,
+        discount: Math.round(frac * 10000) / 100,
+        vat: l.product.vat,
+        totalHT: l.qty * price * (1 - frac),
+      };
+    }),
+    totalHT: totals.totalHT,
+    totalTVA: totals.totalTVA,
+    totalTTC: totals.totalTTC,
+  };
+}
+
 interface OrderState {
   draft: Draft | null;
   devisList: Draft[];

@@ -319,8 +319,13 @@ export async function buildOrderPDF(order: OrderDetail, client?: Client | null):
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(90);
-  doc.text(`N° ${order.reference}`, right, 22, { align: 'right' });
-  doc.text(`Date : ${formatDateShort(order.date)}`, right, 27, { align: 'right' });
+  // Un brouillon n'a pas encore de référence Odoo : on n'affiche que la date.
+  let metaY = 22;
+  if (order.reference) {
+    doc.text(`N° ${order.reference}`, right, metaY, { align: 'right' });
+    metaY += 5;
+  }
+  doc.text(`Date : ${formatDateShort(order.date)}`, right, metaY, { align: 'right' });
 
   // Informations du client.
   let y = Math.max(headerBottom, 30) + 6;
@@ -418,9 +423,18 @@ export async function buildOrderPDF(order: OrderDetail, client?: Client | null):
   return doc;
 }
 
+/** Nom de fichier du devis (référence Odoo, ou nom du client / brouillon). */
+function devisFileName(order: OrderDetail): string {
+  const ref =
+    order.reference ||
+    (order.client ? order.client.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') : '') ||
+    'brouillon';
+  return `devis-${ref}.pdf`;
+}
+
 /** Télécharge le devis PDF de la commande. */
 export async function downloadOrderPDF(order: OrderDetail, client?: Client | null) {
-  (await buildOrderPDF(order, client)).save(`devis-${order.reference}.pdf`);
+  (await buildOrderPDF(order, client)).save(devisFileName(order));
 }
 
 /**
@@ -435,9 +449,10 @@ export async function shareOrderPDF(
 ) {
   const doc = await buildOrderPDF(order, client);
   const blob = doc.output('blob') as Blob;
-  const file = new File([blob], `devis-${order.reference}.pdf`, { type: 'application/pdf' });
-  const subject = `Devis Sheleg ${order.reference}`;
-  const text = `Bonjour,\n\nVeuillez trouver ci-joint votre devis ${order.reference} (${formatEuro(order.totalTTC)} TTC).\n\nCordialement,\nSheleg`;
+  const file = new File([blob], devisFileName(order), { type: 'application/pdf' });
+  const ref = order.reference ? ` ${order.reference}` : '';
+  const subject = `Devis Sheleg${ref}`;
+  const text = `Bonjour,\n\nVeuillez trouver ci-joint votre devis${ref} (${formatEuro(order.totalTTC)} TTC).\n\nCordialement,\nSheleg`;
 
   const nav = navigator as Navigator & {
     canShare?: (data?: unknown) => boolean;

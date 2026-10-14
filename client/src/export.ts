@@ -465,14 +465,71 @@ function gramsPdf(n?: number | null): string {
   return n == null ? '—' : `${String(n).replace('.', ',')} g`;
 }
 
-/** Construit la fiche produit en PDF (logo, photo, infos, nutrition). */
+/** Dimensions du colis « l × H × P » en cm pour le PDF, ou '' si aucune. */
+function dimsPdf(log?: Product['logistics']): string {
+  if (!log) return '';
+  const { largeurCm, hauteurCm, profondeurCm } = log;
+  if (largeurCm == null && hauteurCm == null && profondeurCm == null) return '';
+  const v = (x?: number | null) => (x == null ? '—' : String(x).replace('.', ','));
+  return `${v(largeurCm)} × ${v(hauteurCm)} × ${v(profondeurCm)} cm`;
+}
+
+/** Construit la fiche produit en PDF, mise en page par sections. */
 export async function buildProductPDF(product: Product): Promise<jsPDF> {
   const doc = new jsPDF();
   const left = 14;
   const right = doc.internal.pageSize.getWidth() - 14;
   const fullW = right - left;
+  const pageH = doc.internal.pageSize.getHeight();
+  let y = 10;
 
-  // En-tête : logo + titre.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const finalY = () => (doc as any).lastAutoTable?.finalY ?? y;
+  const ensureSpace = (h: number) => {
+    if (y + h > pageH - 14) {
+      doc.addPage();
+      y = 16;
+    }
+  };
+  // Bandeau de section (séparateur bleu).
+  const band = (title: string) => {
+    ensureSpace(18);
+    doc.setFillColor(7, 58, 107);
+    doc.roundedRect(left, y, fullW, 7.6, 1.4, 1.4, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text(pdfSafe(title), left + 3, y + 5.2);
+    y += 7.6 + 3.5;
+    doc.setTextColor(30);
+  };
+  const infoTable = (rows: [string, string][]) => {
+    if (!rows.length) return;
+    autoTable(doc, {
+      startY: y,
+      body: rows.map(([k, v]) => [k, pdfSafe(v)]),
+      theme: 'striped',
+      styles: { fontSize: 10, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 } },
+      alternateRowStyles: { fillColor: [245, 249, 252] },
+      columnStyles: {
+        0: { cellWidth: 72, textColor: [110, 110, 110] },
+        1: { textColor: [25, 32, 46], halign: 'left' },
+      },
+      margin: { left, right: 14 },
+    });
+    y = finalY() + 5;
+  };
+  const paraText = (text: string) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(40);
+    const lines = doc.splitTextToSize(pdfSafe(text), fullW);
+    ensureSpace(lines.length * 5 + 4);
+    doc.text(lines, left, y);
+    y += lines.length * 5 + 5;
+  };
+
+  // En-tête : logo à gauche, titre + date à droite, puis filet.
   let headerBottom = 22;
   try {
     const logo = await loadLogoDataUrl();
@@ -493,10 +550,14 @@ export async function buildProductPDF(product: Product): Promise<jsPDF> {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(120);
-  doc.text(`Édité le ${DATE()}`, right, 22, { align: 'right' });
+  doc.text(`Éditée le ${DATE()}`, right, 22, { align: 'right' });
+  y = Math.max(headerBottom, 26) + 2;
+  doc.setDrawColor(210, 224, 238);
+  doc.setLineWidth(0.4);
+  doc.line(left, y, right, y);
+  y += 7;
 
   // Nom + catégorie.
-  let y = Math.max(headerBottom, 26) + 6;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(20);
@@ -511,7 +572,9 @@ export async function buildProductPDF(product: Product): Promise<jsPDF> {
     y += 6;
   }
 
-  // Photo à gauche + infos clé/valeur à droite.
+  // Photo à gauche + infos d'identité à droite.
+  const lab = product.labeling;
+  const log = product.logistics;
   const blockTop = y + 2;
   let photoBottom = blockTop;
   let infoX = left;
@@ -527,8 +590,6 @@ export async function buildProductPDF(product: Product): Promise<jsPDF> {
       /* image illisible */
     }
   }
-
-  const lab = product.labeling;
   const kv: [string, string][] = [
     ['Référence', product.default_code || '—'],
     ['Code-barres', product.barcode || '—'],
@@ -537,8 +598,7 @@ export async function buildProductPDF(product: Product): Promise<jsPDF> {
   kv.push(['Conditionnement', `${packSize(product)} pièces / colis`]);
   kv.push(['Prix / pièce', euroPdf(unitPrice(product))]);
   kv.push(['Prix du colis', euroPdf(product.list_price)]);
-  if (lab?.poidsNetGr != null) kv.push(['Poids net', `${lab.poidsNetGr} g`]);
-  if (lab?.poidsBrutGr != null) kv.push(['Poids brut', `${lab.poidsBrutGr} g`]);
+  if (product.vat != null) kv.push(['TVA', `${String(product.vat).replace('.', ',')} %`]);
   if (lab?.kosher) kv.push(['Cacher', lab.kosher + (lab.kosherPassover ? ' · Pessah' : '')]);
 
   let iy = blockTop + 4;
@@ -551,58 +611,65 @@ export async function buildProductPDF(product: Product): Promise<jsPDF> {
     doc.text(pdfSafe(v), infoX + 38, iy);
     iy += 6;
   }
-
   y = Math.max(photoBottom, iy) + 8;
 
-  // Paragraphes (description, ingrédients, allergènes).
-  const para = (title: string, text?: string) => {
-    if (!text) return;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(7, 58, 107);
-    doc.text(title, left, y);
-    y += 5;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(40);
-    const lines = doc.splitTextToSize(pdfSafe(text), fullW);
-    doc.text(lines, left, y);
-    y += lines.length * 5 + 5;
-  };
-  para('Description', product.description);
-  para('Ingrédients', lab?.ingredients);
-  para('Allergènes', lab?.allergenes);
+  // Description.
+  if (product.description) {
+    band('Description');
+    paraText(product.description);
+  }
+
+  // Informations logistiques.
+  const logiRows: [string, string][] = [];
+  if (lab?.poidsNetGr != null) logiRows.push(['Poids net', `${lab.poidsNetGr} g`]);
+  if (lab?.poidsBrutGr != null) logiRows.push(['Poids brut', `${lab.poidsBrutGr} g`]);
+  const dims = dimsPdf(log);
+  if (dims) logiRows.push(['Dimensions du colis (l × H × P)', dims]);
+  if (log?.colisParPalette != null) logiRows.push(['Colis par palette', String(log.colisParPalette)]);
+  if (log?.hsCode) logiRows.push(['Code SH', log.hsCode]);
+  if (logiRows.length) {
+    band('Informations logistiques');
+    infoTable(logiRows);
+  }
 
   // Valeurs nutritionnelles (pour 100 g).
   const n = product.nutrition;
   if (product.hasNutrition && n) {
-    const energie =
-      n.energieKj != null || n.energieKcal != null
-        ? [
-            n.energieKj != null ? `${String(n.energieKj).replace('.', ',')} kJ` : '',
-            n.energieKcal != null ? `${String(n.energieKcal).replace('.', ',')} kcal` : '',
-          ]
-            .filter(Boolean)
-            .join(' / ')
-        : '—';
+    band('Valeurs nutritionnelles (pour 100 g)');
+    const energie = [
+      n.energieKj != null ? `${String(n.energieKj).replace('.', ',')} kJ` : '',
+      n.energieKcal != null ? `${String(n.energieKcal).replace('.', ',')} kcal` : '',
+    ]
+      .filter(Boolean)
+      .join(' / ') || '—';
     autoTable(doc, {
-      startY: y + 2,
-      head: [['Valeurs nutritionnelles (pour 100 g)', '']],
+      startY: y,
       body: [
         ['Énergie', energie],
         ['Matières grasses', gramsPdf(n.matieresGrasses)],
-        ['  dont acides gras saturés', gramsPdf(n.acidesGrasSsatures)],
+        ['   dont acides gras saturés', gramsPdf(n.acidesGrasSsatures)],
         ['Glucides', gramsPdf(n.glucides)],
-        ['  dont sucres', gramsPdf(n.sucres)],
+        ['   dont sucres', gramsPdf(n.sucres)],
         ['Protéines', gramsPdf(n.proteines)],
         ['Sel', gramsPdf(n.sel)],
       ],
-      styles: { fontSize: 10, cellPadding: 2.5 },
-      headStyles: { fillColor: [11, 92, 171], textColor: 255 },
-      alternateRowStyles: { fillColor: [242, 248, 253] },
-      columnStyles: { 0: { cellWidth: 110 }, 1: { halign: 'right' } },
+      theme: 'striped',
+      styles: { fontSize: 10, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 } },
+      alternateRowStyles: { fillColor: [245, 249, 252] },
+      columnStyles: { 0: { cellWidth: 110 }, 1: { halign: 'right', textColor: [25, 32, 46] } },
       margin: { left, right: 14 },
     });
+    y = finalY() + 5;
+  }
+
+  // Ingrédients / Allergènes.
+  if (lab?.ingredients) {
+    band('Ingrédients');
+    paraText(lab.ingredients);
+  }
+  if (lab?.allergenes) {
+    band('Allergènes');
+    paraText(lab.allergenes);
   }
 
   return doc;

@@ -288,6 +288,50 @@ const PRODUCT_NUTRITION_FIELDS = [
   'x_studio_kosher_passover',
 ];
 
+// Informations logistiques : TVA (taxes_id), code SH (standard) et
+// dimensions / palettisation du colis (champs Studio).
+const PRODUCT_LOGISTICS_FIELDS = [
+  'taxes_id',
+  'hs_code',
+  'x_studio_largeur_du_colis_cm',
+  'x_studio_hauteur_du_colis_cm',
+  'x_studio_profondeur_du_colis_cm',
+  'x_studio_nombre_de_colis_par_palette',
+];
+
+// Taux de TVA par identifiant de taxe (account.tax), mis en cache.
+const taxCache = new Map();
+async function resolveVat(taxIds) {
+  if (!Array.isArray(taxIds) || !taxIds.length) return null;
+  const missing = taxIds.filter((id) => !taxCache.has(id));
+  if (missing.length) {
+    try {
+      const rows = await odoo.executeKw('account.tax', 'read', [missing], {
+        fields: ['amount', 'amount_type'],
+      });
+      for (const r of rows) taxCache.set(r.id, r.amount_type === 'percent' ? r.amount : null);
+    } catch {
+      for (const id of missing) taxCache.set(id, null);
+    }
+  }
+  for (const id of taxIds) {
+    const a = taxCache.get(id);
+    if (a != null) return a;
+  }
+  return null;
+}
+
+/** Extrait les informations logistiques d'une fiche produit Odoo. */
+function extractLogistics(p) {
+  return {
+    hsCode: textOrEmpty(p.hs_code),
+    largeurCm: numOrNull(p.x_studio_largeur_du_colis_cm),
+    hauteurCm: numOrNull(p.x_studio_hauteur_du_colis_cm),
+    profondeurCm: numOrNull(p.x_studio_profondeur_du_colis_cm),
+    colisParPalette: numOrNull(p.x_studio_nombre_de_colis_par_palette),
+  };
+}
+
 // Un float/integer Studio vide revient à 0 ; on ne garde que les valeurs > 0.
 function numOrNull(v) {
   const n = Number(v);
@@ -354,13 +398,13 @@ export async function getProductById(id) {
     return p ? normalizeProduct(p) : null;
   }
   let rows;
-  let withNutrition = true;
+  let withExtras = true;
   try {
     rows = await odoo.executeKw('product.product', 'read', [[pid]], {
-      fields: [...PRODUCT_DETAIL_FIELDS, ...PRODUCT_NUTRITION_FIELDS],
+      fields: [...PRODUCT_DETAIL_FIELDS, ...PRODUCT_NUTRITION_FIELDS, ...PRODUCT_LOGISTICS_FIELDS],
     });
   } catch {
-    withNutrition = false;
+    withExtras = false;
     try {
       rows = await odoo.executeKw('product.product', 'read', [[pid]], {
         fields: PRODUCT_DETAIL_FIELDS,
@@ -373,12 +417,15 @@ export async function getProductById(id) {
   }
   if (!rows.length) return null;
   const product = normalizeProduct(rows[0]);
-  if (withNutrition) {
+  if (withExtras) {
     const sel = await studioSelections();
     const { nutrition, labeling, hasNutrition } = extractNutrition(rows[0], sel);
     product.nutrition = nutrition;
     product.labeling = labeling;
     product.hasNutrition = hasNutrition;
+    product.logistics = extractLogistics(rows[0]);
+    const vat = await resolveVat(rows[0].taxes_id);
+    if (vat != null) product.vat = vat;
   }
   return product;
 }

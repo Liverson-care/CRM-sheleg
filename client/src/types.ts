@@ -38,6 +38,15 @@ export interface Labeling {
   kosherPassover?: boolean;
 }
 
+/** Informations logistiques (code SH, dimensions colis, palettisation). */
+export interface Logistics {
+  hsCode?: string;
+  largeurCm?: number | null;
+  hauteurCm?: number | null;
+  profondeurCm?: number | null;
+  colisParPalette?: number | null;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -55,6 +64,7 @@ export interface Product {
   // Fiche détaillée uniquement
   nutrition?: Nutrition;
   labeling?: Labeling;
+  logistics?: Logistics;
   hasNutrition?: boolean;
 }
 

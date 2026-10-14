@@ -11,6 +11,15 @@ function grams(n?: number | null): string {
   return `${String(n).replace('.', ',')} g`;
 }
 
+/** Dimensions du colis « l × H × P » en cm, ou '' si aucune renseignée. */
+function formatDims(log?: Product['logistics']): string {
+  if (!log) return '';
+  const { largeurCm, hauteurCm, profondeurCm } = log;
+  if (largeurCm == null && hauteurCm == null && profondeurCm == null) return '';
+  const v = (x?: number | null) => (x == null ? '—' : String(x).replace('.', ','));
+  return `${v(largeurCm)} × ${v(hauteurCm)} × ${v(profondeurCm)} cm`;
+}
+
 export default function ProductDetail() {
   const { id } = useParams();
 
@@ -47,6 +56,14 @@ export default function ProductDetail() {
 
   const n = product.nutrition;
   const lab = product.labeling;
+  const log = product.logistics;
+  const dims = formatDims(log);
+  const hasLogistics =
+    lab?.poidsNetGr != null ||
+    lab?.poidsBrutGr != null ||
+    !!dims ||
+    log?.colisParPalette != null ||
+    !!log?.hsCode;
 
   return (
     <div className="page">
@@ -74,8 +91,9 @@ export default function ProductDetail() {
             {lab?.marque && <InfoRow label="Marque" value={lab.marque} />}
             <InfoRow label="Conditionnement" value={`${packSize(product)} pièces / colis`} />
             <InfoRow label="Prix du colis" value={formatEuro(product.list_price)} />
-            {lab?.poidsNetGr != null && <InfoRow label="Poids net" value={`${lab.poidsNetGr} g`} />}
-            {lab?.poidsBrutGr != null && <InfoRow label="Poids brut" value={`${lab.poidsBrutGr} g`} />}
+            {product.vat != null && (
+              <InfoRow label="TVA" value={`${String(product.vat).replace('.', ',')} %`} />
+            )}
             {lab?.kosher && (
               <InfoRow
                 label="Cacher"
@@ -93,6 +111,19 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      {hasLogistics && (
+        <div className="detail-card">
+          <h3 className="detail-card-title">Informations logistiques</h3>
+          {lab?.poidsNetGr != null && <InfoRow label="Poids net" value={`${lab.poidsNetGr} g`} />}
+          {lab?.poidsBrutGr != null && <InfoRow label="Poids brut" value={`${lab.poidsBrutGr} g`} />}
+          {dims && <InfoRow label="Dimensions du colis (l × H × P)" value={dims} />}
+          {log?.colisParPalette != null && (
+            <InfoRow label="Colis par palette" value={String(log.colisParPalette)} />
+          )}
+          {log?.hsCode && <InfoRow label="Code SH" value={log.hsCode} />}
+        </div>
+      )}
 
       {lab?.ingredients && (
         <div className="detail-card">

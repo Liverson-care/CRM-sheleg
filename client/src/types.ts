@@ -14,6 +14,30 @@ export interface Client {
   saleOrderCount?: number | null;
 }
 
+/** Valeurs nutritionnelles (pour 100 g), onglet Odoo. */
+export interface Nutrition {
+  energieKj?: number | null;
+  energieKcal?: number | null;
+  matieresGrasses?: number | null;
+  acidesGrasSsatures?: number | null;
+  glucides?: number | null;
+  sucres?: number | null;
+  proteines?: number | null;
+  sel?: number | null;
+}
+
+/** Informations d'étiquetage (marque, poids, kosher, ingrédients…). */
+export interface Labeling {
+  ingredients?: string;
+  allergenes?: string;
+  poidsNet?: number | null;
+  poidsNetGr?: number | null;
+  poidsBrutGr?: number | null;
+  marque?: string;
+  kosher?: string;
+  kosherPassover?: boolean;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -28,6 +52,10 @@ export interface Product {
   vat?: number; // taux de TVA en %
   packSize?: number; // nombre de pièces par colis
   unitPrice?: number; // prix à l'unité (list_price / packSize)
+  // Fiche détaillée uniquement
+  nutrition?: Nutrition;
+  labeling?: Labeling;
+  hasNutrition?: boolean;
 }
 
 /** Ligne d'un devis en cours d'édition. */

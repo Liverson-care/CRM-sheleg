@@ -459,3 +459,158 @@ export async function shareOrderPDF(
   )}&body=${encodeURIComponent(text + '\n\n(Joindre le PDF téléchargé.)')}`;
   window.location.href = href;
 }
+
+/** Grammes avec virgule française, ou tiret si absent. */
+function gramsPdf(n?: number | null): string {
+  return n == null ? '—' : `${String(n).replace('.', ',')} g`;
+}
+
+/** Construit la fiche produit en PDF (logo, photo, infos, nutrition). */
+export async function buildProductPDF(product: Product): Promise<jsPDF> {
+  const doc = new jsPDF();
+  const left = 14;
+  const right = doc.internal.pageSize.getWidth() - 14;
+  const fullW = right - left;
+
+  // En-tête : logo + titre.
+  let headerBottom = 22;
+  try {
+    const logo = await loadLogoDataUrl();
+    const w = 42;
+    const h = (logo.h / logo.w) * w;
+    doc.addImage(logo.dataUrl, 'PNG', left, 10, w, h);
+    headerBottom = 10 + h;
+  } catch {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(7, 58, 107);
+    doc.text('SHELEG', left, 20);
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(7, 58, 107);
+  doc.text('Fiche produit', right, 16, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(120);
+  doc.text(`Édité le ${DATE()}`, right, 22, { align: 'right' });
+
+  // Nom + catégorie.
+  let y = Math.max(headerBottom, 26) + 6;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(20);
+  const nameLines = doc.splitTextToSize(pdfSafe(product.name), fullW);
+  doc.text(nameLines, left, y);
+  y += nameLines.length * 7 + 1;
+  if (product.category) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(110);
+    doc.text(pdfSafe(product.category), left, y);
+    y += 6;
+  }
+
+  // Photo à gauche + infos clé/valeur à droite.
+  const blockTop = y + 2;
+  let photoBottom = blockTop;
+  let infoX = left;
+  const im = product.image ? await scaleImage(product.image, 360) : null;
+  if (im) {
+    const w = 45;
+    const h = (im.h / im.w) * w;
+    try {
+      doc.addImage(im.dataUrl, 'JPEG', left, blockTop, w, h);
+      photoBottom = blockTop + h;
+      infoX = left + w + 8;
+    } catch {
+      /* image illisible */
+    }
+  }
+
+  const lab = product.labeling;
+  const kv: [string, string][] = [
+    ['Référence', product.default_code || '—'],
+    ['Code-barres', product.barcode || '—'],
+  ];
+  if (lab?.marque) kv.push(['Marque', lab.marque]);
+  kv.push(['Conditionnement', `${packSize(product)} pièces / colis`]);
+  kv.push(['Prix / pièce', euroPdf(unitPrice(product))]);
+  kv.push(['Prix du colis', euroPdf(product.list_price)]);
+  if (lab?.poidsNetGr != null) kv.push(['Poids net', `${lab.poidsNetGr} g`]);
+  if (lab?.poidsBrutGr != null) kv.push(['Poids brut', `${lab.poidsBrutGr} g`]);
+  if (lab?.kosher) kv.push(['Cacher', lab.kosher + (lab.kosherPassover ? ' · Pessah' : '')]);
+
+  let iy = blockTop + 4;
+  doc.setFontSize(10);
+  for (const [k, v] of kv) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120);
+    doc.text(k, infoX, iy);
+    doc.setTextColor(30);
+    doc.text(pdfSafe(v), infoX + 38, iy);
+    iy += 6;
+  }
+
+  y = Math.max(photoBottom, iy) + 8;
+
+  // Paragraphes (description, ingrédients, allergènes).
+  const para = (title: string, text?: string) => {
+    if (!text) return;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(7, 58, 107);
+    doc.text(title, left, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(40);
+    const lines = doc.splitTextToSize(pdfSafe(text), fullW);
+    doc.text(lines, left, y);
+    y += lines.length * 5 + 5;
+  };
+  para('Description', product.description);
+  para('Ingrédients', lab?.ingredients);
+  para('Allergènes', lab?.allergenes);
+
+  // Valeurs nutritionnelles (pour 100 g).
+  const n = product.nutrition;
+  if (product.hasNutrition && n) {
+    const energie =
+      n.energieKj != null || n.energieKcal != null
+        ? [
+            n.energieKj != null ? `${String(n.energieKj).replace('.', ',')} kJ` : '',
+            n.energieKcal != null ? `${String(n.energieKcal).replace('.', ',')} kcal` : '',
+          ]
+            .filter(Boolean)
+            .join(' / ')
+        : '—';
+    autoTable(doc, {
+      startY: y + 2,
+      head: [['Valeurs nutritionnelles (pour 100 g)', '']],
+      body: [
+        ['Énergie', energie],
+        ['Matières grasses', gramsPdf(n.matieresGrasses)],
+        ['  dont acides gras saturés', gramsPdf(n.acidesGrasSsatures)],
+        ['Glucides', gramsPdf(n.glucides)],
+        ['  dont sucres', gramsPdf(n.sucres)],
+        ['Protéines', gramsPdf(n.proteines)],
+        ['Sel', gramsPdf(n.sel)],
+      ],
+      styles: { fontSize: 10, cellPadding: 2.5 },
+      headStyles: { fillColor: [11, 92, 171], textColor: 255 },
+      alternateRowStyles: { fillColor: [242, 248, 253] },
+      columnStyles: { 0: { cellWidth: 110 }, 1: { halign: 'right' } },
+      margin: { left, right: 14 },
+    });
+  }
+
+  return doc;
+}
+
+/** Télécharge la fiche produit en PDF. */
+export async function downloadProductPDF(product: Product) {
+  const doc = await buildProductPDF(product);
+  const code = product.default_code || String(product.id);
+  doc.save(`fiche-${code}.pdf`);
+}

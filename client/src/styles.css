@@ -735,6 +735,47 @@ button.kpi:hover {
   gap: 8px;
 }
 
+.muted-inline {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+/* Tableau des valeurs nutritionnelles */
+.nutri-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.nutri-table th,
+.nutri-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line, #e6eef6);
+  text-align: left;
+}
+.nutri-table th {
+  font-weight: 600;
+  color: var(--ink);
+}
+.nutri-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.nutri-table tr:last-child th,
+.nutri-table tr:last-child td {
+  border-bottom: none;
+}
+.nutri-table .nutri-sub th {
+  font-weight: 400;
+  color: var(--ink-soft);
+  padding-left: 22px;
+}
+.nutri-table .nutri-sub td {
+  color: var(--ink-soft);
+}
+
 .count-badge {
   background: var(--sheleg-100);
   color: var(--sheleg-700);

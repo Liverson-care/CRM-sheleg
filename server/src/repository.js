@@ -267,6 +267,85 @@ const PRODUCT_DETAIL_FIELDS = [
   'description_sale',
 ];
 
+// Champs Studio de l'onglet « Valeurs nutritionnelles » + étiquetage.
+// Lus « au mieux » : absents d'une base, la lecture retombe sans eux.
+const PRODUCT_NUTRITION_FIELDS = [
+  'x_studio_energie_kj',
+  'x_studio_energie_kcal',
+  'x_studio_matiere_grasse_g',
+  'x_studio_float_1_1', // - dont acides gras saturés
+  'x_studio_glucides_g',
+  'x_studio_float_2_1_1', // - dont sucres
+  'x_studio_proteines_g',
+  'x_studio_sel_g',
+  'x_studio_ingredients',
+  'x_studio_allergene',
+  'x_studio_poids_net',
+  'x_studio_poids_net_gr',
+  'x_studio_poids_brut_gr',
+  'x_studio_marque_1',
+  'x_studio_kosher',
+  'x_studio_kosher_passover',
+];
+
+// Un float/integer Studio vide revient à 0 ; on ne garde que les valeurs > 0.
+function numOrNull(v) {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+function textOrEmpty(v) {
+  return typeof v === 'string' && v.trim() ? v.trim() : '';
+}
+
+// Libellés des champs sélection Studio (marque, kosher), mis en cache.
+let studioSelMeta;
+async function studioSelections() {
+  if (studioSelMeta) return studioSelMeta;
+  try {
+    const fg = await odoo.executeKw(
+      'product.product',
+      'fields_get',
+      [['x_studio_marque_1', 'x_studio_kosher']],
+      { attributes: ['selection'] }
+    );
+    studioSelMeta = {
+      marque: Object.fromEntries(fg.x_studio_marque_1?.selection || []),
+      kosher: Object.fromEntries(fg.x_studio_kosher?.selection || []),
+    };
+  } catch {
+    studioSelMeta = { marque: {}, kosher: {} };
+  }
+  return studioSelMeta;
+}
+
+/** Construit l'objet nutrition + étiquetage à partir d'une fiche produit Odoo. */
+function extractNutrition(p, sel = { marque: {}, kosher: {} }) {
+  const marqueKey = p.x_studio_marque_1 || '';
+  const kosherKey = p.x_studio_kosher || '';
+  const nutrition = {
+    energieKj: numOrNull(p.x_studio_energie_kj),
+    energieKcal: numOrNull(p.x_studio_energie_kcal),
+    matieresGrasses: numOrNull(p.x_studio_matiere_grasse_g),
+    acidesGrasSsatures: numOrNull(p.x_studio_float_1_1),
+    glucides: numOrNull(p.x_studio_glucides_g),
+    sucres: numOrNull(p.x_studio_float_2_1_1),
+    proteines: numOrNull(p.x_studio_proteines_g),
+    sel: numOrNull(p.x_studio_sel_g),
+  };
+  const labeling = {
+    ingredients: textOrEmpty(p.x_studio_ingredients),
+    allergenes: textOrEmpty(p.x_studio_allergene),
+    poidsNet: numOrNull(p.x_studio_poids_net),
+    poidsNetGr: numOrNull(p.x_studio_poids_net_gr),
+    poidsBrutGr: numOrNull(p.x_studio_poids_brut_gr),
+    marque: marqueKey ? sel.marque[marqueKey] || String(marqueKey) : '',
+    kosher: kosherKey ? sel.kosher[kosherKey] || String(kosherKey) : '',
+    kosherPassover: !!p.x_studio_kosher_passover,
+  };
+  const hasNutrition = Object.values(nutrition).some((v) => v != null);
+  return { nutrition, labeling, hasNutrition };
+}
+
 /** Récupère un produit par son identifiant (fiche détaillée). */
 export async function getProductById(id) {
   const pid = Number(id);
@@ -275,17 +354,33 @@ export async function getProductById(id) {
     return p ? normalizeProduct(p) : null;
   }
   let rows;
+  let withNutrition = true;
   try {
     rows = await odoo.executeKw('product.product', 'read', [[pid]], {
-      fields: PRODUCT_DETAIL_FIELDS,
+      fields: [...PRODUCT_DETAIL_FIELDS, ...PRODUCT_NUTRITION_FIELDS],
     });
   } catch {
-    rows = await odoo.executeKw('product.product', 'read', [[pid]], {
-      fields: PRODUCT_LIST_FIELDS,
-    });
+    withNutrition = false;
+    try {
+      rows = await odoo.executeKw('product.product', 'read', [[pid]], {
+        fields: PRODUCT_DETAIL_FIELDS,
+      });
+    } catch {
+      rows = await odoo.executeKw('product.product', 'read', [[pid]], {
+        fields: PRODUCT_LIST_FIELDS,
+      });
+    }
   }
   if (!rows.length) return null;
-  return normalizeProduct(rows[0]);
+  const product = normalizeProduct(rows[0]);
+  if (withNutrition) {
+    const sel = await studioSelections();
+    const { nutrition, labeling, hasNutrition } = extractNutrition(rows[0], sel);
+    product.nutrition = nutrition;
+    product.labeling = labeling;
+    product.hasNutrition = hasNutrition;
+  }
+  return product;
 }
 
 // ---------- Commandes ----------
